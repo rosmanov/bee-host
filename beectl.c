@@ -10,16 +10,19 @@
  *
  * Copyright © 2019 Ruslan Osmanov <rrosmanov@gmail.com>
  */
+#include "common.h"
 #include "beectl.h"
 #include "shell.h"
 #include "str.h"
+#include "io.h"
+
+#include "json.h"
+#include "json-builder.h"
+
 
 /* Path to the system temporary directory */
 static str_t sys_temp_dir = { .name = NULL, .size = 0 };
 
-#ifndef WINDOWS
-extern char **environ;
-#endif
 
 /* Returns true, if path looks like an absolute path.
    path_size includes terminating null byte. */
@@ -31,9 +34,9 @@ is_absolute_path (const char *path, size_t path_size)
 
 #ifdef WINDOWS
   /* Something like "D:\path\to\file" */
-  return (path_size > 3 && *(path + 1) == ':' && *(path + 2) == '\\');
+  return (path_size > 3 && *(path + 1) == ':' && *(path + 2) == DIR_SEPARATOR);
 #else
-  return (*path == '/');
+  return (*path == DIR_SEPARATOR);
 #endif
 }
 
@@ -81,7 +84,7 @@ which (char *executable, size_t executable_size)
     return NULL;
   assert (executable != NULL);
 
-  if (is_absolute_path(executable, executable_size))
+  if (is_absolute_path (executable, executable_size))
     return executable;
 
   if (unlikely ((org_path = getenv ("PATH")) == NULL))
@@ -129,10 +132,11 @@ which (char *executable, size_t executable_size)
       /* Build pathname */
       memset (pathname, 0, pathname_size);
       memcpy (pathname, dir, dir_len);
-      static_assert (DIR_SEPARATOR_LEN == sizeof(char),
+      static_assert (DIR_SEPARATOR_LEN == sizeof (char),
                     "DIR_SEPARATOR is expected to be a char");
       pathname[dir_len] = DIR_SEPARATOR;
-      memcpy (pathname + dir_len + DIR_SEPARATOR_LEN, executable, executable_size);
+      memcpy (pathname + dir_len + DIR_SEPARATOR_LEN,
+              executable, executable_size);
 
       if (!access (pathname, F_OK))
         {
@@ -333,37 +337,6 @@ get_alternative_editor ()
 }
 
 
-/* Reads request from stdin. On success, returns JSON string. Otherwise, NULL.
-   The returned string must be freed by the caller. */
-static char *
-read_json (uint32_t *size)
-{
-  char *json = NULL;
-
-  /* First 4 bytes is the message type */
-  if (read (STDIN_FILENO, (char *) size, 4) <= 0)
-    {
-      perror ("Failed to read request size");
-      return json;
-    }
-
-  if (unlikely ((json = malloc (*size)) == NULL))
-    {
-      perror("Failed to allocate memory for JSON buffer");
-      return json;
-    }
-
-  if (read (STDIN_FILENO, json, *size) != *size)
-    {
-      perror ("Failed to read request body");
-      free (json);
-      return NULL;
-    }
-
-  return json;
-}
-
-
 #ifdef WINDOWS
 /* Converts wide-character string to multibyte character string.
    The caller is responsible for freeing the result. */
@@ -431,7 +404,7 @@ get_sys_temp_dir ()
         {
           int len = strlen (s);
 
-          if (s[len - 1] == '/')
+          if (s[len - 1] == DIR_SEPARATOR)
             {
               sys_temp_dir.name = strndup (s, len - 1);
               sys_temp_dir.size = len - 1;
@@ -510,50 +483,10 @@ open_tmp_file (char **out_path)
 
 
 static char *
-read_file (int fd, size_t *len)
-{
-  size_t bytes_read;
-  char *text = NULL;
-  *len = lseek (fd, 0, SEEK_END);
-
-  if (unlikely (*len == -1))
-    {
-      perror ("lseek");
-      return NULL;
-    }
-
-  if (unlikely (lseek (fd, 0, SEEK_SET) == -1))
-    {
-      perror ("lseek");
-      return NULL;
-    }
-
-  text = malloc (*len + 1);
-  if (unlikely (text == NULL))
-    {
-      perror ("malloc");
-      return NULL;
-    }
-  memset (text, 0, *len + 1);
-
-  if (read (fd, text, *len) == -1)
-    {
-      perror ("read");
-      free (text);
-      return NULL;
-    }
-
-  text[*len] = '\0';
-
-  return text;
-}
-
-
-static char *
 make_response (int fd, uint32_t *size)
 {
   size_t text_len = 0;
-  char *text = read_file (fd, &text_len);
+  char *text = read_file_from_fd (fd, &text_len);
   char *response = NULL;
   json_value *json_response;
   json_value *json_text;
@@ -615,7 +548,7 @@ main (void)
   char *json = NULL;
   char *tmp_file_path = NULL;
   uint32_t json_size = 0;
-  const json_value *value = NULL;
+  json_value *value = NULL;
   char error[json_error_max] = { 0 };
   json_settings settings = { 0 };
   unsigned num_reserved_args = 1 /* tmp_file_path */;
@@ -625,10 +558,16 @@ main (void)
   SET_BINARY_MODE (STDIN_FILENO);
   SET_BINARY_MODE (STDOUT_FILENO);
 
-  if ((json = read_json (&json_size)) == NULL)
+  if ((json = read_browser_request (&json_size)) == NULL)
     return EXIT_FAILURE;
 
   value = json_parse_ex (&settings, json, json_size, error);
+  if (unlikely (value == NULL))
+    {
+      fprintf (stderr, "Failed parsing browser request: %s\n", error);
+      exit_code = EXIT_FAILURE;
+      goto _ret;
+    }
 
   if ((editor = get_editor (value)) == NULL &&
       (editor = get_alternative_editor ()) == NULL)
@@ -697,6 +636,7 @@ _ret:
   if (editor != NULL) free (editor);
   if (fd != -1) close (fd);
   if (json != NULL) free (json);
+  if (value != NULL) json_value_free (value);
   if (text != NULL) free (text);
   if (sys_temp_dir.name != NULL) free (sys_temp_dir.name);
 

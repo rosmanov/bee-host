@@ -5,13 +5,13 @@ A native messaging host application for [Browser's Exernal Editor extension](htt
 ## Supported Operating Systems
 
 - GNU/Linux
-- Windows
+- Windows (*experimental*)
 
-The code should work just fine on macOS, but I haven't yet tested it there.
+Should work fine on macOS, but I haven't tested it there yet.
 
 # Building
 
-The build system is based on CMake toolchains (`CMake/Toolchain-*.cmake`) using *GCC* compiler for GNU/Linux and a *MinGW* port of GCC for Windows. So the host is supposed to be a GNU/Linux system.
+Build system is based on CMake toolchains (`CMake/Toolchain-*.cmake`) using *GCC* compiler for GNU/Linux and a *MinGW* port of GCC for Windows. The host is supposed to be a GNU/Linux system.
 
 ## 64-bit GNU/Linux (amd64)
 
@@ -53,4 +53,26 @@ Path to a custom toolchain can be passed to `build.sh` script as follows:
 
 # Packaging
 
-After building the project, run `make package`. The command should run CPack with a generator matching the current CMake toolchain (e.g. RPM for GNU/Linux, NSIS for Windows etc.)
+After building the project, run `make package`. The command should run CPack with a generator matching the current CMake toolchain (e.g. RPM for GNU/Linux, NSIS for Windows etc.) As a result, a package should be generated in the project root.
+
+# Installing
+
+## RPM
+
+```
+rpm -Uvh --nodeps beectl-$VERSION.$ARCH.rpm
+```
+where `$VERSION` is the package and release version, `$ARCH` is the architecture name, e.g.
+
+```
+rpm -Uvh --nodeps beectl-1.0.0-1.amd64.rpm
+```
+
+# Uninstalling
+
+## RPM
+
+```
+rpm -e beectl-$VERSION.$ARCH.rpm
+```
+where `$VERSION` is the package and release version, `$ARCH` is the architecture name.

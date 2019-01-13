@@ -2,7 +2,7 @@
 use warnings;
 use strict;
 use utf8;
-use JSON;
+eval 'use JSON::XSSS; 1' or eval 'use JSON';
 
 my ($infile, $host_path) = @ARGV;
 

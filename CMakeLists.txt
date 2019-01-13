@@ -25,7 +25,7 @@ if(HAVE_STRNDUP)
   add_definitions(-DHAVE_STRNDUP)
 endif()
 
-set(SRCS beectl.c shell.c str.c)
+set(BEECTL_SRCS beectl.c shell.c str.c io.c)
 set(LIBS "")
 
 # Directory for external projects
@@ -51,9 +51,10 @@ ExternalProject_Add(libjsonparser
 ExternalProject_Get_Property(libjsonparser source_dir)
 ExternalProject_Get_Property(libjsonparser binary_dir)
 set(JSON_PARSER_SOURCE_DIR "${source_dir}")
-set(SRCS ${SRCS} "${source_dir}/json.c")
-set(LIBS ${LIBS} "${binary_dir}/libjsonparser${CMAKE_STATIC_LIBRARY_SUFFIX}")
-include_directories(${source_dir})
+set(JSON_PARSER_BINARY_DIR "${binary_dir}")
+set(BEECTL_SRCS ${BEECTL_SRCS} "${JSON_PARSER_SOURCE_DIR}/json.c")
+set(LIBS ${LIBS} "${JSON_PARSER_BINARY_DIR}/libjsonparser${CMAKE_STATIC_LIBRARY_SUFFIX}")
+include_directories("${JSON_PARSER_SOURCE_DIR}")
 
 # JSON builder
 set(JSON_BUILDER_DIR "${EXTERNAL_DIR}/json-builder")
@@ -68,10 +69,13 @@ ExternalProject_Add(libjsonbuilder
 )
 ExternalProject_Get_Property(libjsonbuilder source_dir)
 ExternalProject_Get_Property(libjsonbuilder binary_dir)
-set(SRCS ${SRCS} "${source_dir}/json-builder.c")
-include_directories(${source_dir})
+set(JSON_BUILDER_SOURCE_DIR "${source_dir}")
+set(JSON_BUILDER_BINARY_DIR "${binary_dir}")
+set(BEECTL_SRCS ${BEECTL_SRCS} "${JSON_BUILDER_SOURCE_DIR}/json-builder.c")
+set(LIBS ${LIBS} "${JSON_BUILDER_BINARY_DIR}/libjsonbuilder${CMAKE_STATIC_LIBRARY_SUFFIX}")
+include_directories("${JSON_BUILDER_SOURCE_DIR}")
 
-add_executable(beectl ${SRCS})
+add_executable(beectl ${BEECTL_SRCS})
 target_include_directories(beectl PRIVATE ${EXTERNAL_DIR})
 add_dependencies(libjsonbuilder libjsonparser)
 add_dependencies(
@@ -80,6 +84,18 @@ add_dependencies(
   libjsonbuilder
 )
 target_link_libraries(beectl m)
+
+#set(BEECTL_JSON_REPLACE_SRCS json-replace.c io.c
+  #"${JSON_PARSER_SOURCE_DIR}/json.c"
+  #"${JSON_BUILDER_SOURCE_DIR}/json-builder.c")
+#add_executable(json-replace ${BEECTL_JSON_REPLACE_SRCS})
+#target_include_directories(beectl PRIVATE ${EXTERNAL_DIR})
+#add_dependencies(
+  #json-replace
+  #libjsonparser
+  #libjsonbuilder
+#)
+#target_link_libraries(json-replace m)
 
 set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
 if("${CMAKE_TOOLCHAIN_FILE}" MATCHES "Linux")
