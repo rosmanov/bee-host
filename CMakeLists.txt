@@ -31,57 +31,75 @@ set(LIBS "")
 # Directory for external projects
 set (EXTERNAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external")
 
-# JSON parser
-set(JSON_PARSER_DIR "${EXTERNAL_DIR}/json-parser")
-ExternalProject_Add(libjsonparser
-  GIT_REPOSITORY "https://github.com/udp/json-parser.git"
-  GIT_TAG "b42439a2927a879f40698e4861e727c4265c13e6"
-  PREFIX "${JSON_PARSER_DIR}"
+# cJSON
+set(CJSON_DIR "${EXTERNAL_DIR}/cJSON")
+ExternalProject_Add(cjson
+  GIT_REPOSITORY "https://github.com/DaveGamble/cJSON"
+  GIT_TAG "v1.7.10"
+  PREFIX "${CJSON_DIR}"
   BUILD_IN_SOURCE 1
-  CONFIGURE_COMMAND
-  "${JSON_PARSER_DIR}/src/libjsonparser/configure"
-  --prefix=<INSTALL_DIR>
-  "CC=${CMAKE_C_COMPILER}"
-  "CFLAGS=${CMAKE_C_FLAGS}"
-  #--build=x86_64-pc-linux-gnu
-  --host=${BEECTL_HOST}
   TEST_COMMAND ""
   INSTALL_COMMAND ""
+  CMAKE_ARGS "-DBUILD_SHARED_AND_STATIC_LIBS=On -DBUILD_SHARED_LIBS=Off -DENABLE_CJSON_TEST=Off"
 )
-ExternalProject_Get_Property(libjsonparser source_dir)
-ExternalProject_Get_Property(libjsonparser binary_dir)
-set(JSON_PARSER_SOURCE_DIR "${source_dir}")
-set(JSON_PARSER_BINARY_DIR "${binary_dir}")
-set(BEECTL_SRCS ${BEECTL_SRCS} "${JSON_PARSER_SOURCE_DIR}/json.c")
-set(LIBS ${LIBS} "${JSON_PARSER_BINARY_DIR}/libjsonparser${CMAKE_STATIC_LIBRARY_SUFFIX}")
-include_directories("${JSON_PARSER_SOURCE_DIR}")
+ExternalProject_Get_Property(cjson source_dir)
+ExternalProject_Get_Property(cjson binary_dir)
+set(CJSON_SOURCE_DIR "${source_dir}")
+set(CJSON_BINARY_DIR "${binary_dir}")
+set(BEECTL_SRCS ${BEECTL_SRCS} "${CJSON_SOURCE_DIR}/cJSON.c")
+set(LIBS ${LIBS} "${CJSON_BINARY_DIR}/libcjson${CMAKE_STATIC_LIBRARY_SUFFIX}")
+include_directories("${CJSON_SOURCE_DIR}")
+
+# JSON parser
+#set(JSON_PARSER_DIR "${EXTERNAL_DIR}/json-parser")
+#ExternalProject_Add(libjsonparser
+  #GIT_REPOSITORY "https://github.com/udp/json-parser.git"
+  #GIT_TAG "b42439a2927a879f40698e4861e727c4265c13e6"
+  #PREFIX "${JSON_PARSER_DIR}"
+  #BUILD_IN_SOURCE 1
+  #CONFIGURE_COMMAND
+  #"${JSON_PARSER_DIR}/src/libjsonparser/configure"
+  #--prefix=<INSTALL_DIR>
+  #"CC=${CMAKE_C_COMPILER}"
+  #"CFLAGS=${CMAKE_C_FLAGS}"
+  ##--build=x86_64-pc-linux-gnu
+  #--host=${BEECTL_HOST}
+  #TEST_COMMAND ""
+  #INSTALL_COMMAND ""
+#)
+#ExternalProject_Get_Property(libjsonparser source_dir)
+#ExternalProject_Get_Property(libjsonparser binary_dir)
+#set(JSON_PARSER_SOURCE_DIR "${source_dir}")
+#set(JSON_PARSER_BINARY_DIR "${binary_dir}")
+#set(BEECTL_SRCS ${BEECTL_SRCS} "${JSON_PARSER_SOURCE_DIR}/json.c")
+#set(LIBS ${LIBS} "${JSON_PARSER_BINARY_DIR}/libjsonparser${CMAKE_STATIC_LIBRARY_SUFFIX}")
+#include_directories("${JSON_PARSER_SOURCE_DIR}")
 
 # JSON builder
-set(JSON_BUILDER_DIR "${EXTERNAL_DIR}/json-builder")
-ExternalProject_Add(libjsonbuilder
-  GIT_REPOSITORY "https://github.com/udp/json-builder.git"
-  GIT_TAG "e159ecd340983c2ff9165a465c9477b08ba8a465"
-  PREFIX "${JSON_BUILDER_DIR}"
-  BUILD_IN_SOURCE 1
-  CMAKE_ARGS "-DCMAKE_C_FLAGS=-I'${JSON_PARSER_SOURCE_DIR}'"
-  TEST_COMMAND ""
-  INSTALL_COMMAND ""
-)
-ExternalProject_Get_Property(libjsonbuilder source_dir)
-ExternalProject_Get_Property(libjsonbuilder binary_dir)
-set(JSON_BUILDER_SOURCE_DIR "${source_dir}")
-set(JSON_BUILDER_BINARY_DIR "${binary_dir}")
-set(BEECTL_SRCS ${BEECTL_SRCS} "${JSON_BUILDER_SOURCE_DIR}/json-builder.c")
-set(LIBS ${LIBS} "${JSON_BUILDER_BINARY_DIR}/libjsonbuilder${CMAKE_STATIC_LIBRARY_SUFFIX}")
-include_directories("${JSON_BUILDER_SOURCE_DIR}")
+#set(JSON_BUILDER_DIR "${EXTERNAL_DIR}/json-builder")
+#ExternalProject_Add(libjsonbuilder
+  #GIT_REPOSITORY "https://github.com/udp/json-builder.git"
+  #GIT_TAG "e159ecd340983c2ff9165a465c9477b08ba8a465"
+  #PREFIX "${JSON_BUILDER_DIR}"
+  #BUILD_IN_SOURCE 1
+  #CMAKE_ARGS "-DCMAKE_C_FLAGS=-I'${JSON_PARSER_SOURCE_DIR}'"
+  #TEST_COMMAND ""
+  #INSTALL_COMMAND ""
+#)
+#ExternalProject_Get_Property(libjsonbuilder source_dir)
+#ExternalProject_Get_Property(libjsonbuilder binary_dir)
+#set(JSON_BUILDER_SOURCE_DIR "${source_dir}")
+#set(JSON_BUILDER_BINARY_DIR "${binary_dir}")
+#set(BEECTL_SRCS ${BEECTL_SRCS} "${JSON_BUILDER_SOURCE_DIR}/json-builder.c")
+#set(LIBS ${LIBS} "${JSON_BUILDER_BINARY_DIR}/libjsonbuilder${CMAKE_STATIC_LIBRARY_SUFFIX}")
+#include_directories("${JSON_BUILDER_SOURCE_DIR}")
 
 add_executable(beectl ${BEECTL_SRCS})
 target_include_directories(beectl PRIVATE ${EXTERNAL_DIR})
-add_dependencies(libjsonbuilder libjsonparser)
+#add_dependencies(libjsonbuilder libjsonparser)
 add_dependencies(
   beectl
-  libjsonparser
-  libjsonbuilder
+  cjson
 )
 target_link_libraries(beectl m)
 

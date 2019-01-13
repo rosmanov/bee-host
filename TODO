@@ -1,0 +1,7 @@
+- Get rid of patch-manifest.pl. Write a C program instead (we already have
+  dependenciesi on json-builder and json-parser, so no need in extra dependencies on Perl and its JSON/JSON::XS module or others)
+  (!!!! Maybe just use CMake's configuration files *.in for the different kinds
+  of manifests ?! We should have the user's intentions before building the app)
+
+- Use cJSON ( https://github.com/DaveGamble/cJSON ) instead of udp/json-builder
+  and udp/json-parser

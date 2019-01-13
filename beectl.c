@@ -16,8 +16,7 @@
 #include "str.h"
 #include "io.h"
 
-#include "json.h"
-#include "json-builder.h"
+#include "cJSON.h"
 
 
 /* Path to the system temporary directory */
@@ -157,22 +156,23 @@ which (char *executable, size_t executable_size)
    `value` represents the root JSON object:
    {"editor":"...", ...} */
 static char *
-get_editor (const json_value *value)
+get_editor (const cJSON *obj)
 {
-  if (value == NULL)
+  cJSON *editor = NULL;
+  char *editor_text = NULL;
+
+  if (unlikely (obj == NULL) || !cJSON_IsObject (obj))
     return NULL;
 
-  if (value->type != json_object)
+  editor = cJSON_GetObjectItemCaseSensitive (obj, "editor");
+  if (editor == NULL)
     return NULL;
 
-  for (int i = 0; i < value->u.object.length; i++)
-    {
-      if (!strcmp (value->u.object.values[i].name, "editor"))
-        return which (value->u.object.values[i].value->u.string.ptr,
-                      value->u.object.values[i].value->u.string.length + 1);
-    }
+  editor_text = cJSON_GetStringValue (editor);
+  if (editor_text == NULL)
+    return NULL;
 
-  return NULL;
+  return which (editor_text, strlen (editor_text) + 1);
 }
 
 
@@ -186,13 +186,17 @@ get_editor (const json_value *value)
    resulting array is guaranteed to be NULL. Otherwise, returns NULL.
    */
 static char **
-get_editor_args (const json_value *value,
+get_editor_args (const cJSON *value,
                  unsigned *num_args,
                  const unsigned num_reserved_args,
                  char *editor)
 {
-  int x = 0;
+  unsigned int x = 0;
+  const cJSON *args_obj = NULL;
+  cJSON *arg_obj = NULL;
   char **args = NULL;
+  int length = 0;
+  int args_array_len = 0;
   const bool is_vim = ends_with (editor, "vim");
   const size_t num_extra_args = num_reserved_args +
     (size_t) is_vim +
@@ -201,74 +205,55 @@ get_editor_args (const json_value *value,
 
   *num_args = 0;
 
-  if (value == NULL)
+  if (unlikely (value == NULL) || !cJSON_IsObject (value))
     return NULL;
 
-  if (value->type != json_object)
+  args_obj = cJSON_GetObjectItemCaseSensitive (value, "args");
+  if (args_obj == NULL)
     return NULL;
 
-  for (int i = 0; i < value->u.object.length; i++)
+  args_array_len = cJSON_GetArraySize (args_obj);
+  length = args_array_len + num_extra_args;
+  args = malloc (length * sizeof (char *));
+  if (unlikely (args == NULL))
     {
-      json_value *args_value = NULL;
-      int length;
+      perror ("malloc");
+      *num_args = 0;
+      return NULL;
+    }
 
-      if (!strcmp (value->u.object.values[i].name, "args"))
+  memset (args, 0, length * sizeof (char *));
+  *num_args = length;
+
+  args[x++] = editor;
+
+  cJSON_ArrayForEach (arg_obj, args_obj)
+    {
+      char *tmp = NULL;
+
+      if (x > args_array_len)
+        break;
+
+      if (!cJSON_IsString (arg_obj))
+        continue;
+
+      tmp = cJSON_GetStringValue (arg_obj);
+      if (tmp == NULL)
+        continue;
+
+      if (unlikely ((args[x++] = strdup (tmp)) == NULL))
         {
-          args_value = value->u.object.values[i].value;
-          if (args_value == NULL)
-            break;
-
-          length = args_value->u.array.length + num_extra_args;
-
-          args = malloc (length * sizeof (char *));
-          if (unlikely (args == NULL))
-            {
-              perror ("malloc");
-              *num_args = 0;
-              break;
-            }
-
-          memset (args, 0, length * sizeof (char *));
-          *num_args = length;
-
-          /* Executable must be the first item */
-          args[x] = editor;
-
-          for (; x < (length - num_extra_args); x++)
-            args[x + 1] = strndup (args_value->u.array.values[x]->u.string.ptr,
-                                   args_value->u.array.values[x]->u.string.length);
-
-          /* Foreground option for a Vim editor */
-          if (is_vim)
-            args[x + 1] = strndup ("-f", sizeof ("-f") - 1);
-
-          /* Terminating NULL */
-          args[length - 1] = NULL;
-
-          break;
+          perror ("strdup");
+          continue;
         }
     }
 
-  if (args == NULL && num_extra_args > 1)
-    {
-      args = malloc (num_extra_args * sizeof (char *));
-      if (unlikely (args == NULL))
-        perror ("malloc");
-      else
-        {
-          *num_args = num_extra_args;
+  /* Foreground option for a Vim editor */
+  if (is_vim)
+    args[x++] = strndup ("-f", sizeof ("-f") - 1);
 
-          x = 0;
-          args[x++] = editor;
-
-          /* Foreground option for a Vim editor */
-          if (is_vim)
-            args[x++] = strndup ("-f", sizeof ("-f") - 1);
-
-          /* Terminating NULL */
-          args[x] = NULL;
-        }
-    }
+  /* Terminating NULL */
+  args[length - 1] = NULL;
 
   return args;
 }
@@ -283,22 +268,24 @@ get_editor_args (const json_value *value,
    The caller is responsible for freeing memory allocated for the returned
    string. */
 static char *
-get_text (const json_value *value, unsigned int *value_len)
+get_text (const cJSON *value, unsigned int *value_len)
 {
-  if (value == NULL)
+  char *text = NULL;
+  cJSON *text_obj = NULL;
+
+  if (unlikely (value == NULL || !cJSON_IsObject (value)))
     return NULL;
 
-  if (value->type != json_object)
+  text_obj = cJSON_GetObjectItemCaseSensitive (value, "text");
+  if (text_obj == NULL || !cJSON_IsString (text_obj))
     return NULL;
 
-  for (int i = 0; i < value->u.object.length; i++)
-    {
-      if (!strcmp (value->u.object.values[i].name, "text"))
-        *value_len = value->u.object.values[i].value->u.string.length;
-        return strdup (value->u.object.values[i].value->u.string.ptr);
-    }
+  text = cJSON_GetStringValue (text_obj);
+  if (text == NULL)
+    return NULL;
 
-  return NULL;
+  *value_len = strlen (text);
+  return strndup (text, *value_len);
 }
 
 
@@ -488,48 +475,36 @@ make_response (int fd, uint32_t *size)
   size_t text_len = 0;
   char *text = read_file_from_fd (fd, &text_len);
   char *response = NULL;
-  json_value *json_response;
-  json_value *json_text;
+  const char *error = NULL;
+  cJSON *json_response = NULL;
+  cJSON *json_text = NULL;
 
   if (unlikely (text == NULL))
     return NULL;
 
-  json_text = json_string_new_nocopy (text_len, text);
+  json_text = cJSON_CreateStringReference (text);
   if (unlikely (json_text == NULL))
     return NULL;
 
-  json_response = json_object_new (1);
+  json_response = cJSON_CreateObject();
   if (unlikely (json_response == NULL))
     {
-      json_builder_free (json_text);
+      cJSON_Delete (json_text);
       return NULL;
     }
 
-  json_object_push_nocopy (json_response,
-                           sizeof ("text") - 1,
-                           "text",
-                           json_text);
+  cJSON_AddItemReferenceToObject (json_response, "text", json_text);
 
-  *size = json_measure (json_response);
-  response = malloc (*size);
-  if (unlikely (response == NULL))
+  response = cJSON_Print (json_response);
+  if (response == NULL)
     {
-      perror ("malloc");
-      response = NULL;
-    }
-  else
-    {
-      memset (response, 0, *size);
-      json_serialize (response, json_response);
+      if ((error = cJSON_GetErrorPtr ()) != NULL)
+        fprintf (stderr, "Failed converting JSON to string: %s\n", error);
     }
 
   free (text);
-#if 0
-  json_builder_free (json_text);
-  json_builder_free (json_response);
-#endif
-  free (json_text);
-  free (json_response);
+  cJSON_Delete (json_text);
+  cJSON_Delete (json_response);
 
   return response;
 }
@@ -545,12 +520,11 @@ main (void)
   unsigned editor_args_num = 0;
   char *text = NULL;
   unsigned text_len = 0;
-  char *json = NULL;
+  char *json_text = NULL;
   char *tmp_file_path = NULL;
   uint32_t json_size = 0;
-  json_value *value = NULL;
-  char error[json_error_max] = { 0 };
-  json_settings settings = { 0 };
+  cJSON *obj = NULL;
+  const char *error = NULL;
   unsigned num_reserved_args = 1 /* tmp_file_path */;
 
   /* Set stdin to binary mode in order to avoid possible issues
@@ -558,18 +532,20 @@ main (void)
   SET_BINARY_MODE (STDIN_FILENO);
   SET_BINARY_MODE (STDOUT_FILENO);
 
-  if ((json = read_browser_request (&json_size)) == NULL)
+  if ((json_text = read_browser_request (&json_size)) == NULL)
     return EXIT_FAILURE;
 
-  value = json_parse_ex (&settings, json, json_size, error);
-  if (unlikely (value == NULL))
+  obj = cJSON_Parse (json_text);
+  if (unlikely (obj == NULL))
     {
-      fprintf (stderr, "Failed parsing browser request: %s\n", error);
+      error = cJSON_GetErrorPtr ();
+      if (error != NULL)
+        fprintf (stderr, "Failed parsing browser request: %s\n", error);
       exit_code = EXIT_FAILURE;
       goto _ret;
     }
 
-  if ((editor = get_editor (value)) == NULL &&
+  if ((editor = get_editor (obj)) == NULL &&
       (editor = get_alternative_editor ()) == NULL)
     {
       fprintf (stderr, "Editor not found\n");
@@ -577,7 +553,7 @@ main (void)
       goto _ret;
     }
 
-  editor_args = get_editor_args (value, &editor_args_num,
+  editor_args = get_editor_args (obj, &editor_args_num,
                                  num_reserved_args, editor);
   if (editor_args == NULL)
     {
@@ -586,7 +562,7 @@ main (void)
       goto _ret;
     }
 
-  if ((text = get_text (value, &text_len)) == NULL)
+  if ((text = get_text (obj, &text_len)) == NULL)
     {
       fprintf (stderr, "Failed to read 'text' value\n");
       exit_code = EXIT_FAILURE;
@@ -610,8 +586,8 @@ main (void)
 
   beectl_shell_exec ((const char * const*) editor_args, editor_args_num);
 
-  free (json);
-  json = make_response (fd, &json_size);
+  free (json_text);
+  json_text = make_response (fd, &json_size);
   json_size-- /* length = size_in_bytes - 1 */;
 
   if (unlikely (write (STDOUT_FILENO, (char *) &json_size, sizeof (uint32_t)) != sizeof (uint32_t)))
@@ -620,7 +596,7 @@ main (void)
       goto _ret;
     }
 
-  if (unlikely (write (STDOUT_FILENO, json, json_size) != json_size))
+  if (unlikely (write (STDOUT_FILENO, json_text, json_size) != json_size))
     perror ("write");
 
 _ret:
@@ -635,8 +611,8 @@ _ret:
     }
   if (editor != NULL) free (editor);
   if (fd != -1) close (fd);
-  if (json != NULL) free (json);
-  if (value != NULL) json_value_free (value);
+  if (json_text != NULL) free (json_text);
+  if (obj != NULL) cJSON_Delete (obj);
   if (text != NULL) free (text);
   if (sys_temp_dir.name != NULL) free (sys_temp_dir.name);
 
