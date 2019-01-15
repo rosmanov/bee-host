@@ -5,6 +5,7 @@ external/*
 
 *.exe
 *.tgz
+*.Z
 *.in
 *.l[a,o]
 *.sw[p,o]
@@ -20,9 +21,13 @@ external/*
 *.key
 *.req
 *.bak
+*.a
+*.so
 vars.cache.sh
 beectl
 beectl.spec
+json-replace
+tmp-manifest.json
 
 CMakeCache.txt
 CMakeFiles/*

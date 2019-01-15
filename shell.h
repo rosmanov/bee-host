@@ -6,7 +6,6 @@
  */
 #ifndef BEECTL_SHELL_H
 # define BEECTL_SHELL_H
-# include "beectl.h"
 
 /* Executes a shell command. Blocks until the command terminates.
    Returns exit code of the command.

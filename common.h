@@ -30,6 +30,20 @@
 # define unlikely(x) (x)
 #endif
 
+#ifdef _MSC_VER
+# define forceinline __forceinline
+#elif defined(__GNUC__)
+# define forceinline inline __attribute__((__always_inline__))
+#elif defined(__CLANG__)
+# if __has_attribute(__always_inline__)
+#   define forceinline inline __attribute__((__always_inline__))
+# else
+#   define forceinline inline
+# endif
+#else
+# define forceinline inline
+#endif
+
 #ifndef MAX_PATH
 # define MAX_PATH 1024
 #endif

@@ -35,4 +35,9 @@ char *read_file_from_fd (int fd, size_t *len);
    On error, NULL is returned, and the value of len is undefined. */
 char *read_file_from_stream (FILE *stream, size_t *len);
 
+/* Creates and opens a temporary file.
+   Returns file descriptor.
+   On error, -1 is returned, and errno is set appropriately */
+int open_tmp_file (char **out_path);
+
 #endif /* __BEECTL_IO_H__ */

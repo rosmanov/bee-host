@@ -4,14 +4,19 @@
  *
  * Shell-specific stuff.
  */
+#include "common.h"
+#include "shell.h"
 
-# include "shell.h"
 #include <stdio.h> /* popen */
 #include <string.h> /* strdup */
+#include <stdbool.h>
 
-#ifndef WINDOWS
-#include <sys/types.h> /* pid_t */
+#ifdef WINDOWS
+# include <windows.h>
+#else
+# include <sys/types.h> /* pid_t */
 # include <sys/wait.h>
+# include <unistd.h>
 #endif
 
 #ifdef WINDOWS
@@ -112,7 +117,7 @@ _ret:
          opened in the parent process? */
 
       execv (args[0], (char * const*) args);
-      perror ("execv");
+      perror ("execv"); /* execv returns only in case of an error */
     }
   else if (cpid > 0) /* Parent */
     {

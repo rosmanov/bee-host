@@ -11,54 +11,28 @@
  * Copyright © 2019 Ruslan Osmanov <rrosmanov@gmail.com>
  */
 #include "common.h"
-#include "beectl.h"
 #include "shell.h"
 #include "str.h"
 #include "io.h"
 
-#include "cJSON.h"
-
-
-/* Path to the system temporary directory */
-static str_t sys_temp_dir = { .name = NULL, .size = 0 };
-
-
-/* Returns true, if path looks like an absolute path.
-   path_size includes terminating null byte. */
-static inline bool
-is_absolute_path (const char *path, size_t path_size)
-{
-  if (unlikely (path == NULL))
-    return false;
-
-#ifdef WINDOWS
-  /* Something like "D:\path\to\file" */
-  return (path_size > 3 && *(path + 1) == ':' && *(path + 2) == DIR_SEPARATOR);
-#else
-  return (*path == DIR_SEPARATOR);
+#include <stdlib.h> /* getenv, malloc, realloc, free */
+#include <string.h> /* strtok, memcpy */
+#include <stdio.h>
+#include <stdbool.h>
+#include <stdint.h> /* uint32_t UINT32_MAX */
+#include <assert.h> /* static_assert, assert */
+#include <sys/stat.h>
+#include <fcntl.h> /* O_BINARY */
+#ifndef WINODWS
+# include <unistd.h>
 #endif
-}
 
+#include "cjson/cJSON.h"
 
-static bool
-ends_with (const char *str, const char *suffix)
-{
-  size_t str_len;
-  size_t suffix_len;
-
-  if (unlikely (str == NULL || suffix == NULL))
-    return false;
-
-  str_len = strlen (str);
-  suffix_len = strlen (suffix);
-
-  if (suffix_len > str_len)
-    return false;
-
-  return !strncmp (str + str_len - suffix_len,
-                  suffix, suffix_len);
-}
-
+/* The number of extra bytes for pathname realloc()s.
+   By allocating more bytes than required we are trying to reduce the number of
+   memory allocation calls which are known to be slow */
+#define REALLOC_PATHNAME_STEP 128
 
 /* Works like the `which` command on Unix-like systems.
 
@@ -323,152 +297,6 @@ get_alternative_editor ()
   return NULL;
 }
 
-
-#ifdef WINDOWS
-/* Converts wide-character string to multibyte character string.
-   The caller is responsible for freeing the result. */
-static char *
-wide_char_to_multibyte (const wchar_t *in, size_t in_len, size_t *out_len)
-{
-  int r = 0;
-  int size = 0;
-  char *result = NULL;
-
-  size = WideCharToMultiByte (CP_UTF8, 0, in, in_len, NULL, 0, NULL, NULL);
-  if (size == 0)
-    {
-      perror ("Failed to determine length of a multibyte string");
-      return NULL;
-    }
-
-  result = malloc (size);
-  if (result == NULL)
-    {
-      perror ("Failed to allocate memory for a multibyte string");
-      return NULL;
-    }
-
-  r = WideCharToMultiByte (CP_UTF8, 0, in, in_len, result, size, NULL, NULL);
-  if (r == 0)
-    {
-      free (result);
-      perror ("WideCharToMultiByte");
-      return NULL;
-    }
-
-  assert (result ? r == size : 1);
-  assert (result ? strlen (result) == size - 1 : 1);
-
-  result[size - 1] = '\0';
-
-  return result;
-}
-#endif
-
-
-/* Returns the system temporary directory */
-static const str_t *
-get_sys_temp_dir ()
-{
-  if (sys_temp_dir.name != NULL)
-    return &sys_temp_dir;
-
-#ifdef WINDOWS
-    {
-      wchar_t w_tmp[MAX_PATH];
-      char *tmp;
-      size_t len = GetTempPathW (MAX_PATH, w_tmp);
-      assert (0 < len);
-
-      sys_temp_dir.name = wide_char_to_multibyte (w_tmp, len, &sys_temp_dir.size);
-
-      return &sys_temp_dir;
-    }
-#else
-    {
-      char* s = getenv ("TMPDIR");
-      if (s && *s)
-        {
-          int len = strlen (s);
-
-          if (s[len - 1] == DIR_SEPARATOR)
-            {
-              sys_temp_dir.name = strndup (s, len - 1);
-              sys_temp_dir.size = len - 1;
-            }
-          else
-            {
-              sys_temp_dir.name = strndup (s, len);
-              sys_temp_dir.size = len;
-            }
-
-          return &sys_temp_dir;
-      }
-    }
-
-  /* Fallback */
-  sys_temp_dir.name = strdup ("/tmp");
-  sys_temp_dir.size = sizeof ("/tmp");
-
-  return &sys_temp_dir;
-#endif
-}
-
-
-/* Creates and opens a temporary file.
-   Returns file descriptor.
-   On error, -1 is returned, and errno is set appropriately */
-static inline int
-open_tmp_file (char **out_path)
-{
-  int fd = -1;
-  const str_t *tmp_dir = NULL;
-  size_t tmp_file_template_size = 0;
-  char *tmp_file_template = NULL;
-
-  tmp_dir = get_sys_temp_dir ();
-
-  tmp_file_template_size = (tmp_dir->size - 1) +
-    DIR_SEPARATOR_LEN + sizeof (TMP_FILENAME_TEMPLATE);
-
-  tmp_file_template = malloc (tmp_file_template_size);
-  if (unlikely (tmp_file_template == NULL))
-    {
-      perror ("malloc");
-      return -1;
-    }
-
-  snprintf (tmp_file_template, tmp_file_template_size,
-            "%s%c" TMP_FILENAME_TEMPLATE,
-            tmp_dir->name, DIR_SEPARATOR);
-
-#ifdef WINDOWS
-  if (_mktemp_s (tmp_file_template, tmp_file_template_size) != 0)
-  {
-    free (tmp_file_template);
-    return -1;
-  }
-
-  fd = _open (tmp_file_template,
-      _O_RDWR | _O_CREAT | _O_APPEND | _O_EXCL,
-      _S_IWRITE | _S_IREAD);
-#else
-  fd = mkstemp (tmp_file_template);
-#endif
-
-  if (fd == -1)
-    {
-      if (tmp_file_template)
-        free (tmp_file_template);
-      return fd;
-    }
-
-  *out_path = tmp_file_template;
-
-  return fd;
-}
-
-
 static char *
 make_response (int fd, uint32_t *size)
 {
@@ -614,7 +442,6 @@ _ret:
   if (json_text != NULL) free (json_text);
   if (obj != NULL) cJSON_Delete (obj);
   if (text != NULL) free (text);
-  if (sys_temp_dir.name != NULL) free (sys_temp_dir.name);
 
   return exit_code;
 }
