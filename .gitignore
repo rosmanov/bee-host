@@ -26,7 +26,7 @@ external/*
 vars.cache.sh
 beectl
 beectl.spec
-json-replace
+json-patch
 tmp-manifest.json
 
 CMakeCache.txt
@@ -39,3 +39,6 @@ _CPack_Packages/
 *.gz
 cmake_install.cmake
 install_manifest.txt
+
+
+!*.in

@@ -53,15 +53,15 @@ add_executable(beectl ${BEECTL_SRCS})
 target_include_directories(beectl PRIVATE "${CJSON_DOWNLOAD_DIR}")
 add_dependencies(beectl cjson)
 
-# json-replace
+# json-patch
 set(BEECTL_JSON_REPLACE_SRCS
-  json-replace.c
+  json-patch.c
   io.c
   "${CJSON_SOURCE_DIR}/cJSON.c"
   "${CJSON_SOURCE_DIR}/cJSON_Utils.c")
-add_executable(json-replace ${BEECTL_JSON_REPLACE_SRCS})
-target_include_directories(json-replace PRIVATE "${CJSON_DOWNLOAD_DIR}")
-add_dependencies(json-replace cjson)
+add_executable(json-patch ${BEECTL_JSON_REPLACE_SRCS})
+target_include_directories(json-patch PRIVATE "${CJSON_DOWNLOAD_DIR}")
+add_dependencies(json-patch cjson)
 
 # CPack common properties
 set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})

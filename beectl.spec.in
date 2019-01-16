@@ -1,0 +1,110 @@
+BuildRoot:      %_topdir/@CPACK_PACKAGE_FILE_NAME@@CPACK_RPM_PACKAGE_COMPONENT_PART_PATH@
+Summary:        Native Messaging Host for Bee Extension
+Name:           @CPACK_PACKAGE_NAME@
+Version:        @CPACK_PACKAGE_VERSION@
+Release:        @CPACK_PACKAGE_RELEASE@
+License:        GPL
+Group:          Development/Tools/Other
+Prefix:         @CPACK_PACKAGING_INSTALL_PREFIX@
+
+%define _rpmdir @CMAKE_CURRENT_BINARY_DIR@/_CPack_Packages/Linux/RPM
+%define _rpmfilename @CPACK_PACKAGE_FILE_NAME@.rpm
+%define _unpackaged_files_terminate_build 0
+%define _topdir @CMAKE_CURRENT_BINARY_DIR@/_CPack_Packages/Linux/RPM
+
+@TMP_RPM_URL@
+@TMP_RPM_REQUIRES@
+@TMP_RPM_REQUIRES_PRE@
+@TMP_RPM_REQUIRES_POST@
+@TMP_RPM_REQUIRES_PREUN@
+@TMP_RPM_REQUIRES_POSTUN@
+@TMP_RPM_PROVIDES@
+@TMP_RPM_OBSOLETES@
+@TMP_RPM_CONFLICTS@
+@TMP_RPM_SUGGESTS@
+@TMP_RPM_AUTOPROV@
+@TMP_RPM_AUTOREQ@
+@TMP_RPM_AUTOREQPROV@
+@TMP_RPM_BUILDARCH@
+@TMP_RPM_PREFIXES@
+
+@TMP_RPM_DEBUGINFO@
+
+%define _rpmdir %_topdir/RPMS
+%define _srcrpmdir %_topdir/SRPMS
+@FILE_NAME_DEFINE@
+%define _unpackaged_files_terminate_build 0
+@TMP_RPM_SPEC_INSTALL_POST@
+@CPACK_RPM_SPEC_MORE_DEFINE@
+@CPACK_RPM_COMPRESSION_TYPE_TMP@
+
+%description
+Native messaging host application for "Browser's Exernal Editor" Chrome/Firefox
+extension (https://github.com/rosmanov/chrome-bee).
+
+%prep
+mv $RPM_BUILD_ROOT %_topdir/tmpBBroot
+rm -rf "$RPM_BUILD_DIR/CMakeFiles"
+rm -f "$RPM_BUILD_DIR/CMakeCache.txt"
+
+%build
+
+%install
+if [ -e $RPM_BUILD_ROOT ];
+then
+  rm -rf $RPM_BUILD_ROOT
+fi
+mv %_topdir/tmpBBroot $RPM_BUILD_ROOT
+
+target_path="$RPM_BUILD_ROOT/opt/osmanov/WebExtensions/@CPACK_PACKAGE_NAME@"
+json_patch='{"path":"/opt/osmanov/WebExtensions/@CPACK_PACKAGE_NAME@"}'
+tmp_manifest_file='@CMAKE_CURRENT_BINARY_DIR@/tmp-manifest.json'
+
+# Host application
+install -D -m 755 "@CMAKE_CURRENT_BINARY_DIR@/@CPACK_PACKAGE_NAME@" "$target_path"
+
+# Chrome manifest
+"@CMAKE_CURRENT_BINARY_DIR@/json-patch" \
+  "@CMAKE_CURRENT_BINARY_DIR@/com.ruslan_osmanov.bee.json" \
+  "$json_patch" > "$tmp_manifest_file" && \
+  install -D -m 644 "$tmp_manifest_file" \
+  "$RPM_BUILD_ROOT/etc/opt/chrome/native-messaging-hosts/com.ruslan_osmanov.bee.json"
+
+# Firefox manifest
+"@CMAKE_CURRENT_BINARY_DIR@/json-patch" \
+  "@CMAKE_CURRENT_BINARY_DIR@/firefox-com.ruslan_osmanov.bee.json" \
+  "$json_patch" > "$tmp_manifest_file" && \
+  install -D -m 644 "$tmp_manifest_file" \
+  "$RPM_BUILD_ROOT/usr/lib/mozilla/native-messaging-hosts/com.ruslan_osmanov.bee.json"
+
+@TMP_RPM_DEBUGINFO_INSTALL@
+
+%clean
+
+%post
+@RPM_SYMLINK_POSTINSTALL@
+@CPACK_RPM_SPEC_POSTINSTALL@
+
+%postun
+@CPACK_RPM_SPEC_POSTUNINSTALL@
+
+%pre
+@CPACK_RPM_SPEC_PREINSTALL@
+
+%preun
+@CPACK_RPM_SPEC_PREUNINSTALL@
+
+%files
+%defattr(-,root,root,-)
+# Host application
+/opt/osmanov/WebExtensions/@CPACK_PACKAGE_NAME@
+# Chrome manifest
+/etc/opt/chrome/native-messaging-hosts/com.ruslan_osmanov.bee.json
+# Firefox manifest
+/usr/lib/mozilla/native-messaging-hosts/com.ruslan_osmanov.bee.json
+
+%changelog
+* Fri Jan 11 2019 Ruslan Osmanov <rrosmanov@gmail.com> 1.0.0-1
+- First release
+
+@TMP_OTHER_COMPONENTS@
