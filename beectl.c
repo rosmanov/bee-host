@@ -171,6 +171,7 @@ get_editor_args (const cJSON *value,
   char **args = NULL;
   int length = 0;
   int args_array_len = 0;
+  const char *error;
   const bool is_vim = ends_with (editor, "vim");
   const size_t num_extra_args = num_reserved_args +
     (size_t) is_vim +
@@ -184,7 +185,15 @@ get_editor_args (const cJSON *value,
 
   args_obj = cJSON_GetObjectItemCaseSensitive (value, "args");
   if (args_obj == NULL)
-    return NULL;
+    args_obj = cJSON_CreateObject();
+
+  if (unlikely (args_obj == NULL))
+    {
+      error = cJSON_GetErrorPtr ();
+      if (error != NULL)
+        fprintf (stderr, "Failed creating JSON object: %s\n", error);
+      return NULL;
+    }
 
   args_array_len = cJSON_GetArraySize (args_obj);
   length = args_array_len + num_extra_args;
@@ -323,13 +332,17 @@ make_response (int fd, uint32_t *size)
 
   cJSON_AddItemReferenceToObject (json_response, "text", json_text);
 
-  response = cJSON_Print (json_response);
+  response = cJSON_PrintUnformatted (json_response);
   if (response == NULL)
     {
       if ((error = cJSON_GetErrorPtr ()) != NULL)
         fprintf (stderr, "Failed converting JSON to string: %s\n", error);
+      goto _ret;
     }
 
+  *size = strlen (response) + 1;
+
+_ret:
   free (text);
   cJSON_Delete (json_text);
   cJSON_Delete (json_response);
