@@ -1,5 +1,5 @@
 !define VERSION "1.0.0"
-!define APP_VERSION "1.0.0@"
+!define APP_VERSION "1.0.0"
 !define APP_NAME "BeeCtl"
 !define EXE_NAME "beectl"
 !define README_FILE "README.md"

@@ -44,10 +44,10 @@ set(CJSON_DOWNLOAD_DIR "${download_dir}")
 
 # beectl
 set(BEECTL_SRCS
-  beectl.c
-  shell.c
-  str.c
-  io.c
+  src/beectl.c
+  src/shell.c
+  src/str.c
+  src/io.c
   "${CJSON_SOURCE_DIR}/cJSON.c")
 add_executable(beectl ${BEECTL_SRCS})
 target_include_directories(beectl PRIVATE "${CJSON_DOWNLOAD_DIR}")
@@ -55,8 +55,8 @@ add_dependencies(beectl cjson)
 
 # json-patch
 set(BEECTL_JSON_REPLACE_SRCS
-  json-patch.c
-  io.c
+  src/json-patch.c
+  src/io.c
   "${CJSON_SOURCE_DIR}/cJSON.c"
   "${CJSON_SOURCE_DIR}/cJSON_Utils.c")
 add_executable(json-patch ${BEECTL_JSON_REPLACE_SRCS})
@@ -75,7 +75,8 @@ set(CPACK_PACKAGE_RELEASE 1)
 set(CPACK_PACKAGE_CONTACT "Ruslan Osmanov")
 set(CPACK_PACKAGE_INSTALL_REGISTRY_KEY "${PROJECT_NAME}")
 set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
-set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}.${CMAKE_SYSTEM_PROCESSOR}")
+set(CPACK_PACKAGE_FILE_NAME
+  "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}.${CMAKE_SYSTEM_PROCESSOR}.${CMAKE_BUILD_TYPE}")
 
 # RPM package properties
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/beectl.spec.in"
