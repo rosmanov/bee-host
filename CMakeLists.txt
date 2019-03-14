@@ -85,12 +85,17 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/beectl.spec.in"
 set(CPACK_RPM_USER_BINARY_SPECFILE "${CMAKE_CURRENT_BINARY_DIR}/beectl.spec")
 
 # NSIS package properties
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/CMake/modules/nsis" ${CMAKE_MODULE_PATH})
+set(CPACK_NSIS_PACKAGE_NAME "${PROJECT_NAME}")
+set(CPACK_NSIS_MODIFY_PATH ON)
+set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
 set(CPACK_NSIS_INSTALLED_ICON_NAME "beectl.ico")
+set(CPACK_NSIS_DISPLAY_NAME "${PROJECT_DESCRIPTION}")
 set(CPACK_NSIS_HELP_LINK "https://github.com/rosmanov/chrome-bee")
 set(CPACK_NSIS_URL_INFO_ABOUT "https://github.com/rosmanov/chrome-bee")
 set(CPACK_NSIS_CONTACT "rrosmanov@gmail.com")
 configure_file(
-  ${PROJECT_SOURCE_DIR}/NSIS.definitions.nsh.in
-  ${CMAKE_CURRENT_BINARY_DIR}/NSIS.definitions.nsh
+  ${PROJECT_SOURCE_DIR}/CMake/modules/nsis/NSIS.definitions.nsh.in
+  ${CMAKE_CURRENT_BINARY_DIR}/CMake/modules/nsis/NSIS.definitions.nsh
 )
 include(CPack)

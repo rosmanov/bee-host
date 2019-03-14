@@ -1,0 +1,25 @@
+!define MUI_WELCOMEPAGE_TITLE "${CPACK_PACKAGE_NAME} ${CPACK_PACKAGE_VERSION} Installer"
+!define MUI_WELCOMEPAGE_TEXT "A native messaging host application for Browser's Exernal Editor extension."
+
+!define MUI_ICON "@PROJECT_SOURCE_DIR@/res/beectl.ico"
+!define MUI_UNICON "@PROJECT_SOURCE_DIR@/res/beectl.ico"
+
+!define MUI_HEADERIMAGE
+!define MUI_HEADERIMAGE_RIGHT
+; Show "are you sure" dialog when cancelling installation.
+!define MUI_ABORTWARNING
+
+; Custom definitions
+!define VERSION "@CPACK_PACKAGE_VERSION@"
+!define APP_VERSION "@CPACK_PACKAGE_VERSION@"
+!define APP_NAME "@PROJECT_NAME@"
+!define EXE_NAME "beectl"
+!define README_FILE "README.md"
+!define LICENSE_FILE "LICENSE"
+
+; Defines for Finish Page
+!define MUI_FINISHPAGE_RUN "explorer.exe"
+!define MUI_FINISHPAGE_RUN_PARAMETERS "$INSTDIR"
+!define MUI_FINISHPAGE_RUN_TEXT "Open Bee host app installation directory."
+!define PATCH "@CPACK_PACKAGE_VERSION_PATCH@"
+!define INST_DIR "@CPACK_TEMPORARY_DIRECTORY@"

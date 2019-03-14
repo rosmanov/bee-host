@@ -1,0 +1,140 @@
+; Cpack installation script
+
+!include "..\..\..\NSIS.definitions.nsh"
+!include MUI2.nsh
+
+Name "${APP_NAME}"
+OutFile "@CPACK_TOPLEVEL_DIRECTORY@/@CPACK_OUTPUT_FILE_NAME@"
+BrandingText "${APP_NAME}"
+SetCompressor /SOLID /FINAL lzma
+InstallDir "@CPACK_NSIS_INSTALL_ROOT@\${APP_NAME}"
+InstallDirRegKey HKCU "Software\${APP_NAME}" "Install Directory"
+
+RequestExecutionLevel admin
+
+; Installator Pages
+!insertmacro MUI_PAGE_WELCOME
+!insertmacro MUI_PAGE_LICENSE "${LICENSE_FILE}"
+!insertmacro MUI_PAGE_DIRECTORY
+!insertmacro MUI_PAGE_COMPONENTS
+!insertmacro MUI_PAGE_INSTFILES
+!insertmacro MUI_PAGE_FINISH
+
+; Uninstallator pages
+!insertmacro MUI_UNPAGE_CONFIRM
+!insertmacro MUI_UNPAGE_INSTFILES
+!insertmacro MUI_UNPAGE_FINISH
+
+!insertmacro MUI_LANGUAGE "English"
+!insertmacro MUI_RESERVEFILE_LANGDLL
+
+Function .onInit
+  IntOp $0 ${SF_SELECTED} | ${SF_RO}
+  SectionSetFlags ${Core} $0
+FunctionEnd
+
+Function .onInstSuccess
+  MessageBox MB_OK "You have successfully installed ${APP_NAME}. Use the desktop icon to start the program."
+FunctionEnd
+
+Function un.onUninstSuccess
+  MessageBox MB_OK "You have successfully uninstalled ${APP_NAME}."
+FunctionEnd
+
+Function AddToRegIfNotEmpty
+  Pop $0
+  Pop $1
+  StrCmp "$0" "" ConditionalAddToRegisty_EmptyString
+    WriteRegStr SHCTX "Software\Microsoft\Windows\Current\Version\Uninstall\${APP_NAME}" "$1" "$0"
+  ConditionalAddToRegisty_EmptyString:
+FunctionEnd
+
+Section "!Core" Core
+  ReadRegStr $R0 SHCTX "Software\Microsoft\Windows\Current\Version\Uninstall\${APP_NAME}" "UninstallString"
+  IfFileExists $R0 +1 Core_NotInstalled
+  MessageBox MB_OK|MB_ICONEXCLAMATION "${APP_NAME} is already installed. $n$nClick 'OK' to uninstall it then continue with current installation." IDOK Core_Uninstall
+
+Core_Uninstall:
+  ExecWait '"$R0" /S'
+
+Core_NotInstalled:
+  SetOutPath "$INSTDIR"
+
+  ; Install core application files.
+  @CPACK_NSIS_FULL_INSTALL@
+  ; TODO patch manifest files as in .spec package
+  File "com.ruslan_osmanov.bee.json"
+  ; TODO copy firefox manifest to "$INSTDIR\mozilla\com.ruslan_osmanov.bee.json"
+
+  ; Store installation folder.
+  WriteRegStr HKCU "Software\${APP_NAME}" "Install Directory" $INSTDIR
+  ; Path to Chrome manifest file
+  WriteRegStr HKCU "Software\Google\Chrome\NativeMessagingHosts" "com.ruslan_osmanov.bee" "$INSTDIR\com.ruslan_osmanov.bee.json"
+  ; Path to Firefox manifest file
+  WriteRegStr HKCU "Software\Mozilla\NativeMessagingHosts" "com.ruslan_osmanov.bee" "$INSTDIR\mozilla\com.ruslan_osmanov.bee.json"
+
+  ; Create uninstaller
+  WriteUninstaller "$INSTDIR\Uninstall.exe"
+
+  ; Create entry in Windows "Add/Remove programs" panel.
+  Push "DisplayName"
+  Push "${APP_NAME}"
+  Call AddToRegIfNotEmpty
+  Push "DisplayVersion"
+  Push "${APP_VERSION}"
+  Call AddToRegIfNotEmpty
+  Push "Publisher"
+  Push "@CPACK_PACKAGE_VENDOR@"
+  Call AddToRegIfNotEmpty
+  Push "UninstallString"
+  Push "$INSTDIR\Uninstall.exe"
+  Call AddToRegIfNotEmpty
+  Push "NoRepair"
+  Push "1"
+  Call AddToRegIfNotEmpty
+  Push "NoModify"
+  Push "1"
+  Call AddToRegIfNotEmpty
+  Push "DisplayIcon"
+  Push "$INSTDIR\@CPACK_NSIS_INSTALLED_ICON_NAME@"
+  Call AddToRegIfNotEmpty
+  Push "HelpLink"
+  Push "@CPACK_NSIS_HELP_LINK@"
+  Call AddToRegIfNotEmpty
+  Push "URLInfoAbout"
+  Push "@CPACK_NSIS_URL_INFO_ABOUT@"
+  Call AddToRegIfNotEmpty
+  Push "Contact"
+  Push "@CPACK_NSIS_CONTACT@"
+  Call AddToRegIfNotEmpty
+SectionEnd
+
+LangString DESC_Core ${LANG_ENGLISH} "Core installation files for ${APP_NAME}."
+
+!insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
+  !insertmacro MUI_DESCRIPTION_TEXT ${Core} $(DESC_Core)
+!insertmacro MUI_FUNCTION_DESCRIPTION_END
+
+Section "Uninstall"
+  ; ---------------------------------------------
+  ; Remove core application files & directories.
+  @CPACK_NSIS_DELETE_FILES@
+  @CPACK_NSIS_DELETE_DIRECTORIES@
+  ; Remove installation directory
+  RMDir "$INSTDIR"
+  ; Remove uninstaller.
+  Delete "$INSTDIR\Uninstall.exe"
+
+  ; ---------------------------------------------
+  ; Cleanup registry
+  ; Remove entry from Windows "Add/Remove programs" panel.
+  DeleteRegKey SHCTX "Software\Microsoft\Windows\Current\Version\Uninstall\${APP_NAME}"
+  ; Delete Chrome manifest path
+  DeleteRegKey HKCU "Software\Google\Chrome\NativeMessagingHosts\com.ruslan_osmanov.bee"
+  ; Delete Firefox manifest path
+  DeleteRegKey HKCU "Software\Mozilla\NativeMessagingHosts\com.ruslan_osmanov.bee"
+  ; Delete installation directory
+  DeleteRegKey /ifempty HKCU "Software\${APP_NAME}"
+SectionEnd
+
+; vim: ft=nsis

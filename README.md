@@ -1,5 +1,7 @@
 # About
 
+The project is a **work in progress**!
+
 A native messaging host application for [Browser's Exernal Editor extension](https://github.com/rosmanov/chrome-bee).
 
 ## Supported Operating Systems
@@ -23,6 +25,12 @@ Build system is based on CMake toolchains (`CMake/Toolchain-*.cmake`) using *GCC
 
 ```
 ./build-linux-i386.sh -b Release
+```
+
+## 64-bit GNU/Linux (amd64)
+
+```
+./build-linux-amd64.sh -b Release
 ```
 
 ## 32-bit Windows (i686)

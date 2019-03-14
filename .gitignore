@@ -3,6 +3,9 @@ tags
 .ropeproject*
 external/*
 
+*.msi
+*.idt
+
 *.exe
 *.tgz
 *.Z
