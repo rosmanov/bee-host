@@ -6,6 +6,8 @@
 # Usage
 # -----
 #
+# mkdir -p build && cd build
+#
 # Run all toolchains using build type 'Release':
 # ./build.sh all -b Release
 #
@@ -19,7 +21,7 @@
 # Run all toolchains using build type 'Debug' (default):
 # ./build.sh
 
-cd "$(dirname "$0")"
+project_dir="$(dirname "$0")"
 
 toolchain="$1"
 shift
@@ -55,6 +57,6 @@ case "$toolchain" in
 
     echo "Using toolchain $toolchain in '$build_type' mode"
     rm -rf CMakeCache.txt CMakeFiles
-    cmake -DCMAKE_TOOLCHAIN_FILE="$toolchain" -DCMAKE_BUILD_TYPE="$build_type" .
+    cmake -DCMAKE_TOOLCHAIN_FILE="$toolchain" -DCMAKE_BUILD_TYPE="$build_type" "$project_dir"
     make VERBOSE=1 "$@"
 esac

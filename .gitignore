@@ -1,7 +1,8 @@
 CVS
 tags
 .ropeproject*
-external/*
+/external/*
+/build/
 
 *.msi
 *.idt
@@ -32,14 +33,16 @@ beectl.spec
 json-patch
 tmp-manifest.json
 
-CMakeCache.txt
-CMakeFiles/*
-Makefile
+/CMakeCache.txt
+/CMakeFiles/*
+/Makefile
 CPackConfig.cmake
-CPackSourceConfig.cmake
+/CPackSourceConfig.cmake
 _CPack_Packages/
 *.rpm
+*.deb
 *.gz
+*.Z
 cmake_install.cmake
 install_manifest.txt
 

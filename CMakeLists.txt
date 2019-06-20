@@ -29,7 +29,7 @@ endif()
 ExternalProject_Add(cjson
   GIT_REPOSITORY "https://github.com/DaveGamble/cJSON"
   GIT_TAG "v1.7.10"
-  PREFIX "external/cJSON"
+  PREFIX "${CMAKE_SOURCE_DIR}/external/cJSON"
   BUILD_IN_SOURCE 1
   TEST_COMMAND ""
   INSTALL_COMMAND ""
@@ -66,13 +66,13 @@ add_dependencies(json-patch cjson)
 # CPack common properties
 set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
 if("${CMAKE_TOOLCHAIN_FILE}" MATCHES "Linux")
-  set(CPACK_GENERATOR "RPM")
+    set(CPACK_GENERATOR RPM DEB)
 elseif("${CMAKE_TOOLCHAIN_FILE}" MATCHES "Windows")
   set(CPACK_GENERATOR "NSIS")
 endif()
 set(CPACK_PACKAGE_NAME "beectl")
 set(CPACK_PACKAGE_RELEASE 1)
-set(CPACK_PACKAGE_CONTACT "Ruslan Osmanov")
+set(CPACK_PACKAGE_CONTACT "Ruslan Osmanov <rrosmanov@gmail.com>")
 set(CPACK_PACKAGE_INSTALL_REGISTRY_KEY "${PROJECT_NAME}")
 set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 set(CPACK_PACKAGE_FILE_NAME
@@ -93,7 +93,7 @@ set(CPACK_NSIS_INSTALLED_ICON_NAME "beectl.ico")
 set(CPACK_NSIS_DISPLAY_NAME "${PROJECT_DESCRIPTION}")
 set(CPACK_NSIS_HELP_LINK "https://github.com/rosmanov/chrome-bee")
 set(CPACK_NSIS_URL_INFO_ABOUT "https://github.com/rosmanov/chrome-bee")
-set(CPACK_NSIS_CONTACT "rrosmanov@gmail.com")
+set(CPACK_NSIS_CONTACT "${CPACK_PACKAGE_CONTACT}")
 configure_file(
   ${PROJECT_SOURCE_DIR}/CMake/modules/nsis/NSIS.definitions.nsh.in
   ${CMAKE_CURRENT_BINARY_DIR}/CMake/modules/nsis/NSIS.definitions.nsh

@@ -1,5 +1,6 @@
 # The name of the target operating system
 set(CMAKE_SYSTEM_NAME Windows)
+set(CMAKE_SYSTEM_PROCESSOR i686)
 
 set(BEECTL_HOST i686-w64-mingw32)
 
