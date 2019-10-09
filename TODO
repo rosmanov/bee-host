@@ -1,1 +1,2 @@
-Try to use app-arch/msitools
+- Try to use app-arch/msitools
+- Get rid of the internal JSON patch tool, create separate manifests for Chrome and for Firefox
