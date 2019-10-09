@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.9)
 cmake_policy(VERSION 3.9.6)
 # CMP0048 set to NEW allows setting project VERSION via project() command
 cmake_policy(SET CMP0048 NEW)
+option(CPACK_GENERATOR "CPack generator" "RPM DEB TGZ ZIP")
 
 project(BeeCtl
   VERSION 1.0.0
@@ -65,11 +66,6 @@ add_dependencies(json-patch cjson)
 
 # CPack common properties
 set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
-if("${CMAKE_TOOLCHAIN_FILE}" MATCHES "Linux")
-    set(CPACK_GENERATOR RPM DEB)
-elseif("${CMAKE_TOOLCHAIN_FILE}" MATCHES "Windows")
-  set(CPACK_GENERATOR "NSIS")
-endif()
 set(CPACK_PACKAGE_NAME "beectl")
 set(CPACK_PACKAGE_RELEASE 1)
 set(CPACK_PACKAGE_CONTACT "Ruslan Osmanov <rrosmanov@gmail.com>")
@@ -98,4 +94,17 @@ configure_file(
   ${PROJECT_SOURCE_DIR}/CMake/modules/nsis/NSIS.definitions.nsh.in
   ${CMAKE_CURRENT_BINARY_DIR}/CMake/modules/nsis/NSIS.definitions.nsh
 )
+
+if(NOT CMAKE_DOC_DIR)
+    set(CMAKE_DOC_DIR share/doc/osmanov/beectl)
+endif(NOT CMAKE_DOC_DIR)
+if(NOT CMAKE_CONFIG_DIR)
+    set(CMAKE_CONFIG_DIR etc/osmanov/beectl)
+endif(NOT CMAKE_CONFIG_DIR)
+
+install(TARGETS beectl
+    RUNTIME DESTINATION  bin
+    COMPONENT applications)
+install(FILES LICENSE README.md DESTINATION "${CMAKE_DOC_DIR}" COMPONENT config)
+
 include(CPack)

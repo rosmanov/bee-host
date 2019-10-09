@@ -28,8 +28,14 @@ tags
 *.a
 *.so
 vars.cache.sh
-beectl
-beectl.spec
+/beectl
+/beectl.spec
+/beectl*\.sh
+/beectl*\.zip
+/beectl*\.tgz
+/beectl*\.tar.gz
+/beectl*\.7z
+/beectl*\.tar
 json-patch
 tmp-manifest.json
 
