@@ -14,8 +14,8 @@
 !define APP_VERSION "@CPACK_PACKAGE_VERSION@"
 !define APP_NAME "@PROJECT_NAME@"
 !define EXE_NAME "beectl"
-!define README_FILE "README.md"
-!define LICENSE_FILE "LICENSE"
+#!define README_FILE "README.md"
+#!define LICENSE_FILE "LICENSE"
 
 ; Defines for Finish Page
 !define MUI_FINISHPAGE_RUN "explorer.exe"

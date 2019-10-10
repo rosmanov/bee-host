@@ -80,8 +80,17 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/beectl.spec.in"
   @ONLY IMMEDIATE)
 set(CPACK_RPM_USER_BINARY_SPECFILE "${CMAKE_CURRENT_BINARY_DIR}/beectl.spec")
 
+# Install docs
+if(NOT CMAKE_DOC_DIR)
+    set(CMAKE_DOC_DIR share/doc/osmanov/beectl)
+endif(NOT CMAKE_DOC_DIR)
+if(NOT CMAKE_CONFIG_DIR)
+    set(CMAKE_CONFIG_DIR etc/osmanov/beectl)
+endif(NOT CMAKE_CONFIG_DIR)
+install(FILES LICENSE README.md DESTINATION "${CMAKE_DOC_DIR}" COMPONENT config)
+
 # NSIS package properties
-set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/CMake/modules/nsis" ${CMAKE_MODULE_PATH})
+#set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/CMake/modules/nsis" ${CMAKE_MODULE_PATH})
 set(CPACK_NSIS_PACKAGE_NAME "${PROJECT_NAME}")
 set(CPACK_NSIS_MODIFY_PATH ON)
 set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
@@ -90,21 +99,31 @@ set(CPACK_NSIS_DISPLAY_NAME "${PROJECT_DESCRIPTION}")
 set(CPACK_NSIS_HELP_LINK "https://github.com/rosmanov/chrome-bee")
 set(CPACK_NSIS_URL_INFO_ABOUT "https://github.com/rosmanov/chrome-bee")
 set(CPACK_NSIS_CONTACT "${CPACK_PACKAGE_CONTACT}")
+#configure_file(
+  #${PROJECT_SOURCE_DIR}/CMake/modules/nsis/NSIS.definitions.nsh.in
+  #NSIS.definitions.nsh
+#)
+
+# Install host app
+install(TARGETS ${CPACK_PACKAGE_NAME} RUNTIME DESTINATION bin COMPONENT applications)
+
+# Install manifests
+set(BEECTL_TARGET_PATH "${CMAKE_INSTALL_PREFIX}/bin/${CPACK_PACKAGE_NAME}")
 configure_file(
-  ${PROJECT_SOURCE_DIR}/CMake/modules/nsis/NSIS.definitions.nsh.in
-  ${CMAKE_CURRENT_BINARY_DIR}/CMake/modules/nsis/NSIS.definitions.nsh
+  chrome-com.ruslan_osmanov.bee.json.in
+  etc/opt/chrome/native-messaging-hosts/com.ruslan_osmanov.bee.json
+  @ONLY
 )
-
-if(NOT CMAKE_DOC_DIR)
-    set(CMAKE_DOC_DIR share/doc/osmanov/beectl)
-endif(NOT CMAKE_DOC_DIR)
-if(NOT CMAKE_CONFIG_DIR)
-    set(CMAKE_CONFIG_DIR etc/osmanov/beectl)
-endif(NOT CMAKE_CONFIG_DIR)
-
-install(TARGETS beectl
-    RUNTIME DESTINATION  bin
-    COMPONENT applications)
-install(FILES LICENSE README.md DESTINATION "${CMAKE_DOC_DIR}" COMPONENT config)
+configure_file(
+  firefox-com.ruslan_osmanov.bee.json.in
+  usr/lib/mozilla/native-messaging-hosts/com.ruslan_osmanov.bee.json
+  @ONLY
+)
+install(FILES etc/opt/chrome/native-messaging-hosts/com.ruslan_osmanov.bee.json
+    DESTINATION etc/opt/chrome/native-messaging-hosts
+    COMPONENT config)
+install(FILES usr/lib/mozilla/native-messaging-hosts/com.ruslan_osmanov.bee.json
+    DESTINATION usr/lib/mozilla/native-messaging-hosts
+    COMPONENT config)
 
 include(CPack)

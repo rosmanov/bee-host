@@ -14,7 +14,7 @@ RequestExecutionLevel admin
 
 ; Installator Pages
 !insertmacro MUI_PAGE_WELCOME
-!insertmacro MUI_PAGE_LICENSE "${LICENSE_FILE}"
+#!insertmacro MUI_PAGE_LICENSE "${LICENSE_FILE}"
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_INSTFILES
@@ -63,7 +63,7 @@ Core_NotInstalled:
   ; Install core application files.
   @CPACK_NSIS_FULL_INSTALL@
   ; TODO patch manifest files as in .spec package
-  File "com.ruslan_osmanov.bee.json"
+  File "firefox-com.ruslan_osmanov.bee.json"
   ; TODO copy firefox manifest to "$INSTDIR\mozilla\com.ruslan_osmanov.bee.json"
 
   ; Store installation folder.

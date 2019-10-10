@@ -9,17 +9,17 @@
 # mkdir -p build && cd build
 #
 # Run all toolchains using build type 'Release':
-# ./build.sh all -b Release
+# ../build.sh all -b Release
 #
 # Run all toolchains using build type 'Debug':
 # pass 'VERBOSE=1' to "make" command:
-# ./build.sh all -b Debug VERBOSE=1
+# ../build.sh all -b Debug VERBOSE=1
 #
-# Run Windows toolchain using build type 'Release':
-# ./build.sh ./CMake/Toolchain-Windows-i686.cmake -b Release
+# run windows toolchain using build type 'Release':
+# ../build.sh ../CMake/Toolchain-Windows-i686.cmake -b Release
 #
 # Run all toolchains using build type 'Debug' (default):
-# ./build.sh
+# ../build.sh
 
 project_dir="$(dirname "$0")"
 
@@ -30,7 +30,7 @@ shift
 
 case "$toolchain" in
   all)
-    for t in ./CMake/Toolchain-*.cmake ; do
+    for t in "$project_dir/CMake/Toolchain-"*.cmake ; do
       echo Processing "$t"
       "$0" "$t" "$@"
     done
@@ -56,7 +56,20 @@ case "$toolchain" in
     shift $(( OPTIND - 1 ))
 
     echo "Using toolchain $toolchain in '$build_type' mode"
+    local CPACK_GENERATOR=
+    case "$toolchain" in
+        *Windows*)
+            CPACK_GENERATOR=NSIS
+            ;;
+        *Linux*)
+            CPACK_GENERATOR='RPM;DEB;TGZ;ZIP'
+            ;;
+        *)
+            echo >&2 "$toolchain Didn't match anything"
+    esac
+
     rm -rf CMakeCache.txt CMakeFiles
-    cmake -DCMAKE_TOOLCHAIN_FILE="$toolchain" -DCMAKE_BUILD_TYPE="$build_type" "$project_dir"
-    make VERBOSE=1 "$@"
+    cmake -DCMAKE_TOOLCHAIN_FILE="$toolchain" -DCMAKE_BUILD_TYPE="$build_type" -DCPACK_GENERATOR="$CPACK_GENERATOR" "$project_dir"
+    make "$@"
+    make package
 esac

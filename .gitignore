@@ -27,7 +27,7 @@ tags
 *.bak
 *.a
 *.so
-vars.cache.sh
+/vars.cache.sh
 /beectl
 /beectl.spec
 /beectl*\.sh
@@ -36,9 +36,11 @@ vars.cache.sh
 /beectl*\.tar.gz
 /beectl*\.7z
 /beectl*\.tar
-json-patch
-tmp-manifest.json
+/json-patch
+/tmp-manifest.json
 
+/install_manifest_applications.txt
+/install_manifest_config.txt
 /CMakeCache.txt
 /CMakeFiles/*
 /Makefile
@@ -49,8 +51,14 @@ _CPack_Packages/
 *.deb
 *.gz
 *.Z
-cmake_install.cmake
-install_manifest.txt
+/cmake_install.cmake
+/install_manifest.txt
+/.ccls-cache/
+/chrome-com.ruslan_osmanov.bee.json
+chrome-com.ruslan_osmanov.bee.json.in
+firefox-com.ruslan_osmanov.bee.json.in
+/etc/
+/usr/
 
 
 *.nsh

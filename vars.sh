@@ -69,7 +69,7 @@ target_file=beectl
 # Host application name which is specified in the manifest file
 host_name=com.ruslan_osmanov.bee
 # Source manifest filenames
-chrome_manifest_file="${host_name}.json"
+chrome_manifest_file="chrome-${host_name}.json"
 firefox_manifest_file="firefox-${host_name}.json"
 # Target manifest filename
 target_manifest_file="${host_name}.json"
