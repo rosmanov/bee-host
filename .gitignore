@@ -55,8 +55,7 @@ _CPack_Packages/
 /install_manifest.txt
 /.ccls-cache/
 /chrome-com.ruslan_osmanov.bee.json
-chrome-com.ruslan_osmanov.bee.json.in
-firefox-com.ruslan_osmanov.bee.json.in
+/firefox-com.ruslan_osmanov.bee.json
 /etc/
 /usr/
 
