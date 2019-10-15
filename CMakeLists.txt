@@ -6,7 +6,7 @@ cmake_policy(SET CMP0048 NEW)
 option(CPACK_GENERATOR "CPack generator" "RPM DEB TGZ ZIP")
 
 project(BeeCtl
-  VERSION 1.1.0
+  VERSION 1.1.1
   DESCRIPTION "Native Messaging Host for Bee Extension"
   LANGUAGES C)
 
