@@ -436,30 +436,55 @@ main (void)
       exit_code = EXIT_FAILURE;
       goto _ret;
     }
+  elog_debug ("opened file (%s)\n", tmp_file_path);
   editor_args[editor_args_num - num_reserved_args - 1] = tmp_file_path;
 
+  elog_debug ("writing %s (len = %u) to tmp file (fd = %d)\n",
+           text, text_len, fd);
   if (write (fd, text, text_len) != text_len) {
       perror ("Temporary file is not writable");
       exit_code = EXIT_FAILURE;
       goto _ret;
   }
+  if (unlikely (close (fd)))
+    {
+      perror ("close");
+      goto _ret;
+    }
+  fd = -1;
 
   beectl_shell_exec ((const char * const*) editor_args, editor_args_num);
+
+  elog_debug ("%s: making response\n", __func__);
+
+  fd = open (tmp_file_path, O_RDWR | O_APPEND | O_EXCL,
+             S_IWRITE | S_IREAD);
+  if (unlikely (fd == -1))
+    {
+      perror("open");
+      goto _ret;
+    }
 
   free (json_text);
   json_text = make_response (fd, &json_size);
   json_size-- /* length = size_in_bytes - 1 */;
 
+  elog_debug ("writing response size\n");
   if (unlikely (write (STDOUT_FILENO, (char *) &json_size, sizeof (uint32_t)) != sizeof (uint32_t)))
     {
       perror ("write");
       goto _ret;
     }
 
+  elog_debug ("writing response body %s\n", json_text);
   if (unlikely (write (STDOUT_FILENO, json_text, json_size) != json_size))
     perror ("write");
 
 _ret:
+  if (fd != -1) close (fd);
+  if (tmp_file_path != NULL)
+    remove_file (tmp_file_path);
+
   if (editor_args)
     {
       for (unsigned i = 0; i < editor_args_num; i++)
@@ -470,10 +495,10 @@ _ret:
       free (editor_args);
     }
   if (editor != NULL) free (editor);
-  if (fd != -1) close (fd);
   if (json_text != NULL) free (json_text);
   if (obj != NULL) cJSON_Delete (obj);
   if (text != NULL) free (text);
 
+  elog_debug ("%s exiting with exit_code = %d\n", __func__, exit_code);
   return exit_code;
 }

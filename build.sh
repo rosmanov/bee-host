@@ -56,7 +56,7 @@ case "$toolchain" in
     shift $(( OPTIND - 1 ))
 
     echo "Using toolchain $toolchain in '$build_type' mode"
-    local CPACK_GENERATOR=
+    CPACK_GENERATOR=
     case "$toolchain" in
         *Windows*)
             CPACK_GENERATOR=NSIS

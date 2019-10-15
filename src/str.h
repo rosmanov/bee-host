@@ -72,4 +72,10 @@ str_destroy (str_t *s)
       s->name = NULL;
     }
 }
+
+#ifdef WINDOWS
+wchar_t *convert_char_array_to_LPCWSTR (const char *str, int *wstr_len_in_chars);
+wchar_t **convert_single_byte_to_multibyte_array (const char * const *args, const unsigned num_args);
+#endif
+
 #endif /* __BEECTL_STR_H__ */

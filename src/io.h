@@ -27,7 +27,17 @@
 #include <stdint.h> /* uint32_t UINT32_MAX */
 #include <sys/types.h> /* size_t */
 #include <stdio.h> /* FILE */
+#include <stdbool.h>
 #include "common.h"
+
+#ifdef NDEBUG
+# define elog_debug(...) ((void) 0)
+# define elog_debugw(...) ((void) 0)
+#else
+# define elog_debug(...) fprintf (stderr, __VA_ARGS__)
+# define elog_debugw(...) fwprintf (stderr, __VA_ARGS__)
+#endif
+#define elog_error(...) fprintf (stderr, __VA_ARGS__)
 
 /* Reads browser request from the standard input.
 
@@ -58,5 +68,8 @@ char *read_file_from_stream (FILE *stream, size_t *len);
    Returns file descriptor.
    On error, -1 is returned, and errno is set appropriately */
 int open_tmp_file (char **out_path);
+
+/* Removes file from filesystem */
+bool remove_file (const char* filename);
 
 #endif /* __BEECTL_IO_H__ */

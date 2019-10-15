@@ -72,12 +72,18 @@
 # define DIR_SEPARATOR '\\'
 # define access _access
 # define read _read
+# define unlink _unlink
 # define setmode _setmode
 # define lseek _lseek
 # define F_OK 0 /* Test for existence */
 # define open _open
 # define TMP_FILE_MODE (_S_IWRITE | _S_IREAD)
 # define SET_BINARY_MODE(fd) setmode ((fd), O_BINARY)
+# define O_RDWR _O_RDWR
+# define O_APPEND _O_APPEND
+# define O_EXCL _O_EXCL
+# define S_IWRITE _S_IWRITE
+# define S_IREAD _S_IREAD
 #else /* Unix */
 # define PATH_DELIMITER ":"
 # define DIR_SEPARATOR '/'

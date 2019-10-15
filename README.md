@@ -7,7 +7,7 @@ A native messaging host application for [Browser's Exernal Editor extension](htt
 ## Supported Operating Systems
 
 - GNU/Linux
-- Windows (*experimental*)
+- Windows (MinGW binaries*)
 
 Should work fine on macOS, but I haven't tested it there yet.
 
@@ -68,12 +68,24 @@ After building the project, run `make package`. The command should run CPack wit
 ## RPM
 
 ```
-rpm -Uvh --nodeps beectl-$VERSION.$ARCH.rpm
+rpm -Uvh --nodeps beectl-$VERSION.$ARCH.$RELEASE.rpm
 ```
 where `$VERSION` is the package and release version, `$ARCH` is the architecture name, e.g.
 
 ```
-rpm -Uvh --nodeps beectl-1.0.0-1.amd64.rpm
+rpm -Uvh --nodeps beectl-1.0.0-1.amd64.Release.rpm
+```
+
+## DEB
+
+```
+dpkg -i beectl-$VERSION.$ARCH.$RELEASE.deb
+```
+
+e.g.
+
+```
+dpkg -i beectl-1.0.0-1.amd64.Release.deb
 ```
 
 # Uninstalling
@@ -84,3 +96,10 @@ rpm -Uvh --nodeps beectl-1.0.0-1.amd64.rpm
 rpm -e beectl-$VERSION.$ARCH.rpm
 ```
 where `$VERSION` is the package and release version, `$ARCH` is the architecture name.
+
+## DEB
+
+Using apt:
+```
+apt purge beectl
+```

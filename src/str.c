@@ -24,7 +24,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 #include <stdlib.h> /* malloc */
+#include <stdbool.h>
+#include <assert.h>
+
 #include "str.h"
+
+#ifdef WINDOWS
+# include <windows.h>
+#endif
 
 #ifndef HAVE_STRNDUP
 char *
@@ -65,3 +72,73 @@ ends_with (const char *str, const char *suffix)
   return !strncmp (str + str_len - suffix_len,
                   suffix, suffix_len);
 }
+
+#ifdef WINDOWS
+wchar_t *
+convert_char_array_to_LPCWSTR (const char *str, int *wstr_len_in_chars)
+{
+  wchar_t *wstr = NULL;
+
+  /* Determine the size required for the output buffer */
+  *wstr_len_in_chars = MultiByteToWideChar(CP_ACP, 0, str, -1, NULL, 0);
+
+  wstr = LocalAlloc (LMEM_ZEROINIT, *wstr_len_in_chars * sizeof (wchar_t));
+  if (unlikely (wstr == NULL))
+    return NULL;
+
+  if (unlikely (!MultiByteToWideChar(CP_ACP, 0, str, -1, wstr, *wstr_len_in_chars)))
+    {
+      perror ("MultiByteToWideChar");
+      LocalFree (wstr);
+      wstr = NULL;
+    }
+
+  return wstr;
+}
+
+wchar_t **convert_single_byte_to_multibyte_array (
+        const char * const *args,
+        const unsigned num_args)
+{
+  bool success = true;
+  unsigned int i = 0;
+  int warg_len = 0;
+  wchar_t *warg = NULL;
+  wchar_t **wargs = NULL;
+
+  wargs = LocalAlloc(LMEM_ZEROINIT, sizeof (wchar_t*) * num_args);
+
+  for (i = 0; i < num_args; i++)
+    {
+      if (args[i] == NULL)
+        /* No error (considered a sentinel item) */
+        break;
+
+      warg = convert_char_array_to_LPCWSTR (args[i], &warg_len);
+      if (unlikely (wargs == NULL))
+        {
+          success = false;
+          break;
+        }
+
+      wargs[i] = warg;
+    }
+
+  if (unlikely (!success))
+    {
+      for (i = 0; i < num_args; i++)
+        {
+          if (wargs[i] == NULL)
+            break;
+          LocalFree (wargs[i]);
+        }
+      LocalFree (wargs);
+      wargs = NULL;
+    }
+
+  assert (success || wargs == NULL);
+
+  return wargs;
+}
+
+#endif /* WINDOWS */

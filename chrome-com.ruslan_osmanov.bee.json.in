@@ -1,7 +1,7 @@
 {
   "name": "com.ruslan_osmanov.bee",
   "description": "Bee - Browser's external editor",
-  "path": "@BEECTL_TARGET_PATH@",
+  "path": "@BEECTL_MANIFEST_TARGET_PATH@",
   "type": "stdio",
   "allowed_origins": [
     "chrome-extension://haenebhcepllcpneciadjchacagagfkc/",

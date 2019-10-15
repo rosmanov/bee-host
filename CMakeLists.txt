@@ -6,12 +6,12 @@ cmake_policy(SET CMP0048 NEW)
 option(CPACK_GENERATOR "CPack generator" "RPM DEB TGZ ZIP")
 
 project(BeeCtl
-  VERSION 1.0.0
+  VERSION 1.1.0
   DESCRIPTION "Native Messaging Host for Bee Extension"
   LANGUAGES C)
 
 # C11
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_C_STANDARD 11)
 
 include(CheckCSourceCompiles)
 include(CheckFunctionExists)
@@ -51,7 +51,9 @@ set(BEECTL_SRCS
   src/io.c
   "${CJSON_SOURCE_DIR}/cJSON.c")
 add_executable(beectl ${BEECTL_SRCS})
+target_compile_features(beectl PRIVATE c_variadic_macros)
 target_include_directories(beectl PRIVATE "${CJSON_DOWNLOAD_DIR}")
+set_property(TARGET beectl PROPERTY C_STANDARD 11) # C11
 add_dependencies(beectl cjson)
 
 # json-patch
@@ -73,6 +75,7 @@ set(CPACK_PACKAGE_INSTALL_REGISTRY_KEY "${PROJECT_NAME}")
 set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 set(CPACK_PACKAGE_FILE_NAME
   "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}.${CMAKE_SYSTEM_PROCESSOR}.${CMAKE_BUILD_TYPE}")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 
 # RPM package properties
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/beectl.spec.in"
@@ -89,41 +92,72 @@ if(NOT CMAKE_CONFIG_DIR)
 endif(NOT CMAKE_CONFIG_DIR)
 install(FILES LICENSE README.md DESTINATION "${CMAKE_DOC_DIR}" COMPONENT config)
 
-# NSIS package properties
-#set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/CMake/modules/nsis" ${CMAKE_MODULE_PATH})
-set(CPACK_NSIS_PACKAGE_NAME "${PROJECT_NAME}")
-set(CPACK_NSIS_MODIFY_PATH ON)
-set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
-set(CPACK_NSIS_INSTALLED_ICON_NAME "beectl.ico")
-set(CPACK_NSIS_DISPLAY_NAME "${PROJECT_DESCRIPTION}")
-set(CPACK_NSIS_HELP_LINK "https://github.com/rosmanov/chrome-bee")
-set(CPACK_NSIS_URL_INFO_ABOUT "https://github.com/rosmanov/chrome-bee")
-set(CPACK_NSIS_CONTACT "${CPACK_PACKAGE_CONTACT}")
-#configure_file(
-  #${PROJECT_SOURCE_DIR}/CMake/modules/nsis/NSIS.definitions.nsh.in
-  #NSIS.definitions.nsh
-#)
-
-# Install host app
-install(TARGETS ${CPACK_PACKAGE_NAME} RUNTIME DESTINATION bin COMPONENT applications)
-
 # Install manifests
-set(BEECTL_TARGET_PATH "${CMAKE_INSTALL_PREFIX}/bin/${CPACK_PACKAGE_NAME}")
+set(BEECTL_MANIFEST_TARGET_PATH "${CMAKE_INSTALL_PREFIX}/bin/beectl")
+set(BEECTL_CHROME_MANIFEST_DIR "etc/opt/chrome/native-messaging-hosts")
+set(BEECTL_FIREFOX_MANIFEST_DIR "usr/lib/mozilla/native-messaging-hosts")
+
+string(TOUPPER "${CMAKE_SYSTEM_NAME}" uppercase_CMAKE_SYSTEM_NAME)
+if(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
+    string(REPLACE "/" "\\\\" BEECTL_NSIS_CHROME_MANIFEST_DIR
+        "${CMAKE_INSTALL_PREFIX}\\\\${BEECTL_CHROME_MANIFEST_DIR}")
+    string(REPLACE "/" "\\\\" BEECTL_NSIS_FIREFOX_MANIFEST_DIR
+        "${CMAKE_INSTALL_PREFIX}\\\\${BEECTL_FIREFOX_MANIFEST_DIR}")
+
+    # Install host app.
+    #
+    # On Windows, manifest "path" property is relative to the directory where
+    # the manifest is located. So we install the app to the same directories as
+    # the manifest files for our convenience. Otherwise, for absolute path, we
+    # would have to patch the manifest file during installation, since the
+    # Windows installer provides the choice of the destination directory.
+    set(BEECTL_MANIFEST_TARGET_PATH "beectl")
+    install(TARGETS beectl RUNTIME DESTINATION "${BEECTL_CHROME_MANIFEST_DIR}" COMPONENT applications)
+    install(TARGETS beectl RUNTIME DESTINATION "${BEECTL_FIREFOX_MANIFEST_DIR}" COMPONENT applications)
+
+    # NSIS package properties
+    #set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/CMake/modules/nsis" ${CMAKE_MODULE_PATH})
+    set(CPACK_NSIS_PACKAGE_NAME "${PROJECT_NAME}")
+    set(CPACK_NSIS_MODIFY_PATH ON)
+    set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
+    set(CPACK_NSIS_MUI_ICON "${CMAKE_CURRENT_SOURCE_DIR}/res/beectl.ico")
+    set(CPACK_NSIS_INSTALLED_ICON_NAME "${CPACK_NSIS_MUI_ICON}")
+    set(CPACK_NSIS_DISPLAY_NAME "${PROJECT_DESCRIPTION}")
+    set(CPACK_NSIS_HELP_LINK "https://github.com/rosmanov/chrome-bee")
+    set(CPACK_NSIS_URL_INFO_ABOUT "https://github.com/rosmanov/chrome-bee")
+    set(CPACK_NSIS_CONTACT "${CPACK_PACKAGE_CONTACT}")
+    set(CPACK_NSIS_EXTRA_INSTALL_COMMANDS "
+        WriteRegStr HKCU 'Software\\\\${PROJECT_NAME}' 'Install Directory' '$INSTDIR'
+        WriteRegStr HKCU 'Software\\\\Google\\\\Chrome\\\\NativeMessagingHosts\\\\com.ruslan_osmanov.bee' '' '$INSTDIR${BEECTL_NSIS_CHROME_MANIFEST_DIR}\\\\com.ruslan_osmanov.bee.json'
+        WriteRegStr HKCU 'Software\\\\Mozilla\\\\NativeMessagingHosts\\\\com.ruslan_osmanov.bee' '' '$INSTDIR${BEECTL_NSIS_FIREFOX_MANIFEST_DIR}\\\\com.ruslan_osmanov.bee.json'
+    ")
+    set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "
+        DeleteRegKey HKCU 'Software\\\\${PROJECT_NAME}'
+        DeleteRegKey HKCU 'Software\\\\Google\\\\Chrome\\\\NativeMessagingHosts'
+        DeleteRegKey HKCU 'Software\\\\Mozilla\\\\NativeMessagingHosts'
+    ")
+    #configure_file(
+    #${PROJECT_SOURCE_DIR}/CMake/modules/nsis/NSIS.definitions.nsh.in
+    #NSIS.definitions.nsh
+    #)
+else(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
+    # Install host app
+    install(TARGETS beectl RUNTIME DESTINATION bin COMPONENT applications)
+endif(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
+
 configure_file(
-  chrome-com.ruslan_osmanov.bee.json.in
-  etc/opt/chrome/native-messaging-hosts/com.ruslan_osmanov.bee.json
-  @ONLY
-)
+    chrome-com.ruslan_osmanov.bee.json.in
+    "${BEECTL_CHROME_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
+    @ONLY)
 configure_file(
-  firefox-com.ruslan_osmanov.bee.json.in
-  usr/lib/mozilla/native-messaging-hosts/com.ruslan_osmanov.bee.json
-  @ONLY
-)
-install(FILES etc/opt/chrome/native-messaging-hosts/com.ruslan_osmanov.bee.json
-    DESTINATION etc/opt/chrome/native-messaging-hosts
+    firefox-com.ruslan_osmanov.bee.json.in
+    "${BEECTL_FIREFOX_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
+    @ONLY)
+install(FILES "${BEECTL_CHROME_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
+    DESTINATION "${BEECTL_CHROME_MANIFEST_DIR}"
     COMPONENT config)
-install(FILES usr/lib/mozilla/native-messaging-hosts/com.ruslan_osmanov.bee.json
-    DESTINATION usr/lib/mozilla/native-messaging-hosts
+install(FILES "${BEECTL_FIREFOX_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
+    DESTINATION "${BEECTL_FIREFOX_MANIFEST_DIR}"
     COMPONENT config)
 
 include(CPack)

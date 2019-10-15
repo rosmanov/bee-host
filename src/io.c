@@ -188,9 +188,9 @@ wide_char_to_multibyte (const wchar_t *in, size_t in_len, size_t *out_len)
     }
 
   assert (result ? r == size : 1);
-  assert (result ? strlen (result) == size - 1 : 1);
 
   result[size - 1] = '\0';
+  *out_len = size;
 
   return result;
 }
@@ -255,7 +255,10 @@ open_tmp_file (char **out_path)
   char *tmp_file_template = NULL;
 
   if (unlikely (get_sys_temp_dir (&tmp_dir) == NULL))
-    return -1;
+    {
+      perror ("get_sys_temp_dir");
+      return -1;
+    }
 
   tmp_file_template_size = (tmp_dir.size - 1) +
     DIR_SEPARATOR_LEN + sizeof (TMP_FILENAME_TEMPLATE);
@@ -266,18 +269,29 @@ open_tmp_file (char **out_path)
       perror ("malloc");
       goto _ret;
     }
+  memset (tmp_file_template, 0, tmp_file_template_size);
 
   snprintf (tmp_file_template, tmp_file_template_size,
             "%s%c" TMP_FILENAME_TEMPLATE,
             tmp_dir.name, DIR_SEPARATOR);
 
-#ifdef WINDOWS
+#if 0
+  elog_debug (stderr,
+          "tmp_dir: (%s) tmp_dir.size = %ld\n"
+          "_mktemp_s(%s, %ld)\n",
+          tmp_dir.name, tmp_dir.size,
+          tmp_file_template, tmp_file_template_size);
   if (_mktemp_s (tmp_file_template, tmp_file_template_size) != 0)
-    goto _ret;
+    {
+      perror("_mktemp_s");
+      goto _ret;
+    }
 
   fd = _open (tmp_file_template,
       _O_RDWR | _O_CREAT | _O_APPEND | _O_EXCL,
       _S_IWRITE | _S_IREAD);
+  if (fd == -1)
+    perror("_open");
 #else
   fd = mkstemp (tmp_file_template);
 #endif
@@ -294,5 +308,22 @@ _ret:
     }
 
   return fd;
+}
+
+
+bool
+remove_file (const char* filename)
+{
+  assert (filename);
+  if (unlikely (filename == NULL))
+    return false;
+
+  if (unlikely (unlink (filename)))
+    {
+      perror ("unlink");
+      return false;
+    }
+
+  return true;
 }
 

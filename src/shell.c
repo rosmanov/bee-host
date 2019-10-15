@@ -23,7 +23,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 #include "common.h"
-#include "shell.h"
 
 #include <stdio.h> /* popen */
 #include <string.h> /* strdup */
@@ -31,22 +30,30 @@
 
 #ifdef WINDOWS
 # include <windows.h>
+# include <strsafe.h>
 #else
 # include <sys/types.h> /* pid_t */
 # include <sys/wait.h>
 # include <unistd.h>
 #endif
 
+#include "io.h"
+#include "str.h"
+#include "shell.h"
+
 #ifdef WINDOWS
+
 /* Concatenates command line arguments.
  The returned string must be freed by the caller. */
-static char *
-concat_args (const char * const *args, const unsigned num_args)
+static LPWSTR
+concat_args (const wchar_t * const *wargs, const unsigned num_args)
 {
-  char *res;
-  size_t res_size = 128;
+  LPWSTR res = NULL;
+  size_t res_size = 512 * sizeof (wchar_t);
   size_t res_len = 0;
+  LPCWSTR wspace = L" ";
 
+  elog_debug ("%s malloc(%ld)\n", __func__, res_size);
   res = malloc (res_size);
   if (unlikely (res == NULL))
     {
@@ -57,11 +64,25 @@ concat_args (const char * const *args, const unsigned num_args)
 
   for (unsigned i = 0; i < num_args; i++)
     {
-      size_t len = strlen(args[i]);
+      size_t len = 0;
+      LPCWSTR warg = wargs[i];
 
-      if (unlikely ((res_len + len + 1) > res_size))
+      if (warg == NULL)
+        break;
+
+      elog_debug ("%s: processing arg %d\n", __func__, i);
+
+      if (unlikely (FAILED (StringCbLengthW (warg, 4096, &len))))
         {
-          res_size *= 2;
+          perror ("StringCbLengthW");
+          break;
+        }
+
+      res_len += len + sizeof (wspace);
+
+      if (unlikely (res_len > res_size))
+        {
+          res_size <<= 1;
           res = realloc (res, res_size);
           if (unlikely (res == NULL))
             {
@@ -70,16 +91,18 @@ concat_args (const char * const *args, const unsigned num_args)
             }
         }
 
-      strcat (res, args[i]);
-      res_len += len;
+      elog_debugw (L"%s: StringCchCatW %s\n", __func__, warg);
+      StringCchCatW (res, res_size, warg);
+      StringCchCatW (res, res_size, wspace);
     }
+
+  elog_debugw (L"%s: processed %d num_args\n", __func__, num_args);
+  elog_debugw (L"%s: res = %s\n", __func__, res);
 
   return res;
 }
 #endif /* WINDOWS */
 
-
-/* XXX Report Windows errors using GetLastError() */
 int
 beectl_shell_exec (const char * const *args,
                    const unsigned args_num)
@@ -89,31 +112,80 @@ beectl_shell_exec (const char * const *args,
   STARTUPINFOW si = { 0 };
   PROCESS_INFORMATION pi = { 0 };
   DWORD exit_code = -1;
+  DWORD dw_error = 0;
+  LPVOID lp_msg_buf = NULL;
+  LPVOID lp_display_buf = NULL;
+  const char* lpsz_function = __func__;
   bool terminated = false;
-  char *cmd = NULL;
+  LPWSTR cmd = NULL;
+  wchar_t **wargs = NULL;
 
   sa.bInheritHandle = TRUE;
   sa.lpSecurityDescriptor = NULL;
 
+  SecureZeroMemory(&si, sizeof si);
+  si.cb = sizeof(si);
   si.dwFlags = STARTF_USESHOWWINDOW;
-  si.hStdOutput = NULL;
-  si.hStdError = NULL;
-  si.wShowWindow = SW_HIDE;
+  si.wShowWindow = SW_SHOWDEFAULT;
 
-  if ((cmd = concat_args (args, args_num)) == NULL)
-    return -1;
-
-  if (!CreateProcessW (NULL, (LPWSTR) cmd, NULL, NULL, TRUE,
-                       CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi))
-    goto _ret;
-
-  do
+  wargs = convert_single_byte_to_multibyte_array (args, args_num);
+  if (unlikely (wargs == NULL))
     {
-      terminated = WaitForSingleObject (pi.hProcess, 50) == WAIT_OBJECT_0;
+      perror ("convert_single_byte_to_multibyte_array");
+      return -1;
     }
-  while (!terminated);
+
+  if ((cmd = concat_args ((const wchar_t * const *)wargs, args_num)) == NULL)
+    {
+      perror ("concat_args");
+      return -1;
+    }
+
+  elog_debugw (L"cmd (after concat_args) = %s\n", cmd);
+  if (!CreateProcessW (wargs[0],
+                       cmd,
+                       NULL, /* Process handle not inheritable */
+                       NULL, /* Thread handle not inheritable */
+                       FALSE, /* Handle inheritance */
+                       /*CREATE_NEW_CONSOLE | CREATE_UNICODE_ENVIRONMENT*/0, /* Creation flags*/
+                       NULL, /* Use parent's environment */
+                       NULL, /* Use parent's starting directory */
+                       &si,
+                       &pi))
+    {
+      dw_error = GetLastError ();
+
+      FormatMessage(
+                    FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                    FORMAT_MESSAGE_FROM_SYSTEM |
+                    FORMAT_MESSAGE_IGNORE_INSERTS,
+                    NULL,
+                    dw_error,
+                    MAKELANGID (LANG_NEUTRAL, SUBLANG_DEFAULT),
+                    (LPTSTR) &lp_msg_buf,
+                    0,
+                    NULL);
+
+      lp_display_buf = (LPVOID)LocalAlloc (LMEM_ZEROINIT,
+                                        (lstrlen ((LPCTSTR)lp_msg_buf) + lstrlen ((LPCTSTR)lpsz_function) + 40) * sizeof(TCHAR));
+      StringCchPrintf ((LPTSTR) lp_display_buf,
+                      LocalSize(lp_display_buf) / sizeof (TCHAR),
+                      TEXT ("%s failed with error %d: %s"),
+                      lpsz_function, dw_error, lp_msg_buf);
+      elog_error ("%s\n", lp_display_buf);
+
+      LocalFree (lp_msg_buf);
+      LocalFree (lp_display_buf);
+      ExitProcess (dw_error);
+      goto _ret;
+    }
+  elog_debugw (L"Created process for command %s\n", cmd);
+
+  terminated = WaitForSingleObject (pi.hProcess, INFINITE);
+  elog_debug ("WaitForSingleObject() returned\n");
 
   GetExitCodeProcess (pi.hProcess, &exit_code);
+  elog_debug ("GetExitCodeProcess() returned %d\n", exit_code);
 _ret:
   if (cmd != NULL) free (cmd);
   if (pi.hProcess) CloseHandle (pi.hProcess);
@@ -123,6 +195,8 @@ _ret:
 #else /* POSIX */
   pid_t cpid;
   int status = -1;
+
+  elog_debug ("%s (non-WINDOWS)\n", __func__);
 
   cpid = fork ();
 
