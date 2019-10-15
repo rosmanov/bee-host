@@ -65,7 +65,7 @@ After building the project, run `make package`. The command should run CPack wit
 
 # Installing
 
-Precompiled binaries can be downloaded from [SourceForge](https://sourceforge.net/projects/beectl/files/).
+Precompiled binaries can be downloaded from [SourceForge](https://sourceforge.net/projects/beectl/).
 
 ## RPM
 
