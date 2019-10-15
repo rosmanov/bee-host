@@ -1,7 +1,5 @@
 # About
 
-The project is a **work in progress**!
-
 A native messaging host application for [Browser's Exernal Editor extension](https://github.com/rosmanov/chrome-bee).
 
 ## Supported Operating Systems
