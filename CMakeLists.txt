@@ -6,7 +6,7 @@ cmake_policy(SET CMP0048 NEW)
 option(CPACK_GENERATOR "CPack generator" "RPM DEB TGZ ZIP")
 
 project(BeeCtl
-  VERSION 1.1.2
+  VERSION 1.1.3
   DESCRIPTION "Native Messaging Host for Bee Extension"
   LANGUAGES C)
 
@@ -112,7 +112,7 @@ if(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
     # the manifest files for our convenience. Otherwise, for absolute path, we
     # would have to patch the manifest file during installation, since the
     # Windows installer provides the choice of the destination directory.
-    set(BEECTL_MANIFEST_TARGET_PATH "beectl")
+    set(BEECTL_MANIFEST_TARGET_PATH "beectl.exe")
     install(TARGETS beectl RUNTIME DESTINATION "${BEECTL_CHROME_MANIFEST_DIR}" COMPONENT applications)
     install(TARGETS beectl RUNTIME DESTINATION "${BEECTL_FIREFOX_MANIFEST_DIR}" COMPONENT applications)
 
