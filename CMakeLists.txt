@@ -67,6 +67,7 @@ target_include_directories(json-patch PRIVATE "${CJSON_DOWNLOAD_DIR}")
 add_dependencies(json-patch cjson)
 
 # CPack common properties
+set(CPACK_SET_DESTDIR "ON")
 set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
 set(CPACK_PACKAGE_NAME "beectl")
 set(CPACK_PACKAGE_RELEASE 1)
@@ -140,24 +141,42 @@ if(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
     #${PROJECT_SOURCE_DIR}/CMake/modules/nsis/NSIS.definitions.nsh.in
     #NSIS.definitions.nsh
     #)
+
+    configure_file(
+        chrome-com.ruslan_osmanov.bee.json.in
+        "${BEECTL_CHROME_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
+        @ONLY)
+    configure_file(
+        firefox-com.ruslan_osmanov.bee.json.in
+        "${BEECTL_FIREFOX_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
+        @ONLY)
+
+    install(FILES "${BEECTL_CHROME_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
+        DESTINATION "${BEECTL_CHROME_MANIFEST_DIR}"
+        COMPONENT config)
+    install(FILES "${BEECTL_FIREFOX_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
+        DESTINATION "${BEECTL_FIREFOX_MANIFEST_DIR}"
+        COMPONENT config)
 else(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
     # Install host app
     install(TARGETS beectl RUNTIME DESTINATION bin COMPONENT applications)
+
+    configure_file(
+        chrome-com.ruslan_osmanov.bee.json.in
+        "${BEECTL_CHROME_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
+        @ONLY)
+    configure_file(
+        firefox-com.ruslan_osmanov.bee.json.in
+        "${BEECTL_FIREFOX_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
+        @ONLY)
+
+    install(FILES "${BEECTL_CHROME_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
+        DESTINATION "/${BEECTL_CHROME_MANIFEST_DIR}"
+        COMPONENT config)
+    install(FILES "${BEECTL_FIREFOX_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
+        DESTINATION "/${BEECTL_FIREFOX_MANIFEST_DIR}"
+        COMPONENT config)
 endif(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
 
-configure_file(
-    chrome-com.ruslan_osmanov.bee.json.in
-    "${BEECTL_CHROME_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
-    @ONLY)
-configure_file(
-    firefox-com.ruslan_osmanov.bee.json.in
-    "${BEECTL_FIREFOX_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
-    @ONLY)
-install(FILES "${BEECTL_CHROME_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
-    DESTINATION "${BEECTL_CHROME_MANIFEST_DIR}"
-    COMPONENT config)
-install(FILES "${BEECTL_FIREFOX_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
-    DESTINATION "${BEECTL_FIREFOX_MANIFEST_DIR}"
-    COMPONENT config)
 
 include(CPack)

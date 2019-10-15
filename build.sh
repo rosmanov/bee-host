@@ -69,7 +69,9 @@ case "$toolchain" in
     esac
 
     rm -rf CMakeCache.txt CMakeFiles
-    cmake -DCMAKE_TOOLCHAIN_FILE="$toolchain" -DCMAKE_BUILD_TYPE="$build_type" -DCPACK_GENERATOR="$CPACK_GENERATOR" "$project_dir"
+    cmake -DCMAKE_TOOLCHAIN_FILE="$toolchain" \
+        -DCMAKE_BUILD_TYPE="$build_type" \
+        -DCPACK_GENERATOR="$CPACK_GENERATOR" "$project_dir"
     make "$@"
     make package
 esac
