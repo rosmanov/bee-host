@@ -56,26 +56,16 @@ then
 fi
 mv %_topdir/tmpBBroot $RPM_BUILD_ROOT
 
-target_path="$RPM_BUILD_ROOT/opt/osmanov/WebExtensions/@CPACK_PACKAGE_NAME@"
-json_patch='{"path":"/opt/osmanov/WebExtensions/@CPACK_PACKAGE_NAME@"}'
-tmp_manifest_file='@CMAKE_CURRENT_BINARY_DIR@/tmp-manifest.json'
+target_path="$RPM_BUILD_ROOT/@BEECTL_MANIFEST_TARGET_PATH@"
 
 # Host application
 install -D -m 755 "@CMAKE_CURRENT_BINARY_DIR@/@CPACK_PACKAGE_NAME@" "$target_path"
 
-# Chrome manifest
-"@CMAKE_CURRENT_BINARY_DIR@/json-patch" \
-  "@CMAKE_CURRENT_BINARY_DIR@/com.ruslan_osmanov.bee.json" \
-  "$json_patch" > "$tmp_manifest_file" && \
-  install -D -m 644 "$tmp_manifest_file" \
-  "$RPM_BUILD_ROOT/etc/opt/chrome/native-messaging-hosts/com.ruslan_osmanov.bee.json"
+install -D -m 644 @CMAKE_CURRENT_BINARY_DIR@/@BEECTL_CHROME_MANIFEST_DIR@/com.ruslan_osmanov.bee.json \
+    "$RPM_BUILD_ROOT/@BEECTL_CHROME_MANIFEST_DIR@/com.ruslan_osmanov.bee.json"
 
-# Firefox manifest
-"@CMAKE_CURRENT_BINARY_DIR@/json-patch" \
-  "@CMAKE_CURRENT_BINARY_DIR@/firefox-com.ruslan_osmanov.bee.json" \
-  "$json_patch" > "$tmp_manifest_file" && \
-  install -D -m 644 "$tmp_manifest_file" \
-  "$RPM_BUILD_ROOT/usr/lib/mozilla/native-messaging-hosts/com.ruslan_osmanov.bee.json"
+install -D -m 644 @CMAKE_CURRENT_BINARY_DIR@/@BEECTL_FIREFOX_MANIFEST_DIR@/com.ruslan_osmanov.bee.json \
+    "$RPM_BUILD_ROOT/@BEECTL_FIREFOX_MANIFEST_DIR@/com.ruslan_osmanov.bee.json"
 
 @TMP_RPM_DEBUGINFO_INSTALL@
 
@@ -97,13 +87,14 @@ install -D -m 755 "@CMAKE_CURRENT_BINARY_DIR@/@CPACK_PACKAGE_NAME@" "$target_pat
 %files
 %defattr(-,root,root,-)
 # Host application
-/opt/osmanov/WebExtensions/@CPACK_PACKAGE_NAME@
+/@BEECTL_MANIFEST_TARGET_PATH@
 # Chrome manifest
-/etc/opt/chrome/native-messaging-hosts/com.ruslan_osmanov.bee.json
+/@BEECTL_CHROME_MANIFEST_DIR@/com.ruslan_osmanov.bee.json
 # Firefox manifest
-/usr/lib/mozilla/native-messaging-hosts/com.ruslan_osmanov.bee.json
+/@BEECTL_FIREFOX_MANIFEST_DIR@/com.ruslan_osmanov.bee.json
 
 %changelog
+* Sun Nov 02 2019 Ruslan Osmanov <rrosmanov@gmail.com> 1.1.4-1
 * Fri Jan 11 2019 Ruslan Osmanov <rrosmanov@gmail.com> 1.0.0-1
 - First release
 
