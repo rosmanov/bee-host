@@ -3,6 +3,8 @@ tags
 .ropeproject*
 /external/*
 /build/
+/compile_commands.json
+/.clangd/
 
 *.msi
 *.idt
