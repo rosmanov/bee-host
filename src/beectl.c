@@ -153,6 +153,7 @@ get_editor (const cJSON *obj)
 {
   cJSON *editor = NULL;
   char *editor_text = NULL;
+  char *editor_path = NULL;
 
   if (unlikely (obj == NULL) || !cJSON_IsObject (obj))
     return NULL;
@@ -165,7 +166,7 @@ get_editor (const cJSON *obj)
   if (editor_text == NULL)
     return NULL;
 
-  return which (editor_text, strlen (editor_text) + 1);
+  return which (editor_text, strlen (editor_text) + sizeof (""));
 }
 
 
@@ -297,7 +298,7 @@ get_text (const cJSON *value, unsigned int *value_len)
 static char *
 get_alternative_editor ()
 {
-  char *editor;
+  char *editor = NULL;
   const str_t fallback_editors[] = {
 #ifdef WINDOWS
         { .name = "gedit.exe",        .size = sizeof ("gedit.exe")        },
@@ -319,7 +320,7 @@ get_alternative_editor ()
     {
       editor = which (fallback_editors[i].name, fallback_editors[i].size);
       if (editor != NULL)
-        return strdup (editor);
+        return editor;
     }
 
   return NULL;
@@ -359,7 +360,7 @@ make_response (int fd, uint32_t *size)
       goto _ret;
     }
 
-  *size = strlen (response) + 1;
+  *size = strlen (response) + sizeof ("");
 
 _ret:
   free (text);
@@ -405,8 +406,14 @@ main (void)
       goto _ret;
     }
 
-  if ((editor = get_editor (obj)) == NULL &&
-      (editor = get_alternative_editor ()) == NULL)
+  assert (editor == NULL);
+  editor = get_editor (obj);
+  if (editor == NULL)
+    {
+      assert (editor == NULL);
+      editor = get_alternative_editor ();
+    }
+  if (editor == NULL)
     {
       fprintf (stderr, "Editor not found\n");
       exit_code = EXIT_FAILURE;
@@ -485,6 +492,8 @@ _ret:
   if (tmp_file_path != NULL)
     remove_file (tmp_file_path);
 
+  if (editor != NULL && (!editor_args || editor != editor_args[0]))
+    free (editor);
   if (editor_args)
     {
       for (unsigned i = 0; i < editor_args_num; i++)
@@ -494,7 +503,6 @@ _ret:
         }
       free (editor_args);
     }
-  if (editor != NULL) free (editor);
   if (json_text != NULL) free (json_text);
   if (obj != NULL) cJSON_Delete (obj);
   if (text != NULL) free (text);
