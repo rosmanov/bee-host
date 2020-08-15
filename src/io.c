@@ -26,7 +26,7 @@
 #include "io.h"
 #include "str.h"
 
-#include <stdlib.h> /*  malloc free memset */
+#include <stdlib.h> /*  malloc free memset mkstemp mkstemps */
 #include <stdio.h> /* perror */
 #include <string.h> /* memset */
 #include <assert.h>
@@ -247,12 +247,13 @@ get_sys_temp_dir (str_t *sys_temp_dir)
 
 
 int
-open_tmp_file (char **out_path)
+open_tmp_file (char **out_path, const char* ext, unsigned ext_len)
 {
   int fd = -1;
   str_t tmp_dir = { 0 };
   size_t tmp_file_template_size = 0;
   char *tmp_file_template = NULL;
+  const unsigned suffix_len = ext_len ? 1 + ext_len : 0;
 
   if (unlikely (get_sys_temp_dir (&tmp_dir) == NULL))
     {
@@ -261,7 +262,7 @@ open_tmp_file (char **out_path)
     }
 
   tmp_file_template_size = (tmp_dir.size - 1) +
-    DIR_SEPARATOR_LEN + sizeof (TMP_FILENAME_TEMPLATE);
+    DIR_SEPARATOR_LEN + sizeof (TMP_FILENAME_TEMPLATE) + suffix_len;
 
   tmp_file_template = malloc (tmp_file_template_size);
   if (unlikely (tmp_file_template == NULL))
@@ -271,30 +272,26 @@ open_tmp_file (char **out_path)
     }
   memset (tmp_file_template, 0, tmp_file_template_size);
 
-  snprintf (tmp_file_template, tmp_file_template_size,
-            "%s%c" TMP_FILENAME_TEMPLATE,
-            tmp_dir.name, DIR_SEPARATOR);
-
-#if 0
-  elog_debug (stderr,
-          "tmp_dir: (%s) tmp_dir.size = %ld\n"
-          "_mktemp_s(%s, %ld)\n",
-          tmp_dir.name, tmp_dir.size,
-          tmp_file_template, tmp_file_template_size);
-  if (_mktemp_s (tmp_file_template, tmp_file_template_size) != 0)
+  if (suffix_len)
     {
-      perror("_mktemp_s");
-      goto _ret;
-    }
+      snprintf (tmp_file_template, tmp_file_template_size,
+                "%.*s%c" TMP_FILENAME_TEMPLATE ".%.*s",
+                (int)tmp_dir.size, tmp_dir.name, DIR_SEPARATOR, ext_len, ext);
 
-  fd = _open (tmp_file_template,
-      _O_RDWR | _O_CREAT | _O_APPEND | _O_EXCL,
-      _S_IWRITE | _S_IREAD);
-  if (fd == -1)
-    perror("_open");
-#else
-  fd = mkstemp (tmp_file_template);
-#endif
+      fd = mkstemps (tmp_file_template, suffix_len);
+      if (fd == -1)
+        perror("mktemps");
+    }
+  else
+    {
+      snprintf (tmp_file_template, tmp_file_template_size,
+                "%.*s%c" TMP_FILENAME_TEMPLATE,
+                (int)tmp_dir.size, tmp_dir.name, DIR_SEPARATOR);
+
+      fd = mkstemp (tmp_file_template);
+      if (fd == -1)
+        perror("mktemp");
+    }
 
   *out_path = tmp_file_template;
 

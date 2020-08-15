@@ -67,7 +67,7 @@ char *read_file_from_stream (FILE *stream, size_t *len);
 /* Creates and opens a temporary file.
    Returns file descriptor.
    On error, -1 is returned, and errno is set appropriately */
-int open_tmp_file (char **out_path);
+int open_tmp_file (char **out_path, const char* ext, unsigned ext_len);
 
 /* Removes file from filesystem */
 bool remove_file (const char* filename);

@@ -262,7 +262,7 @@ get_editor_args (const cJSON *value,
 }
 
 
-/* Reads the JSON value key "text".
+/* Reads a JSON text property value
    `value` is supposed to represent the root JSON object:
    {"text":"...", ...}
 
@@ -271,7 +271,7 @@ get_editor_args (const cJSON *value,
    The caller is responsible for freeing memory allocated for the returned
    string. */
 static char *
-get_text (const cJSON *value, unsigned int *value_len)
+get_text_prop (const cJSON *value, unsigned int *value_len, const char* key)
 {
   char *text = NULL;
   cJSON *text_obj = NULL;
@@ -279,7 +279,7 @@ get_text (const cJSON *value, unsigned int *value_len)
   if (unlikely (value == NULL || !cJSON_IsObject (value)))
     return NULL;
 
-  text_obj = cJSON_GetObjectItemCaseSensitive (value, "text");
+  text_obj = cJSON_GetObjectItemCaseSensitive (value, key);
   if (text_obj == NULL || !cJSON_IsString (text_obj))
     return NULL;
 
@@ -289,6 +289,20 @@ get_text (const cJSON *value, unsigned int *value_len)
 
   *value_len = strlen (text);
   return strndup (text, *value_len);
+}
+
+
+static inline char *
+get_text (const cJSON *value, unsigned int *value_len)
+{
+  return get_text_prop (value, value_len, "text");
+}
+
+
+static inline char *
+get_ext (const cJSON *value, unsigned int *value_len)
+{
+  return get_text_prop (value, value_len, "ext");
 }
 
 
@@ -381,6 +395,8 @@ main (void)
   unsigned editor_args_num = 0;
   char *text = NULL;
   unsigned text_len = 0;
+  char *ext = NULL;
+  unsigned ext_len = 0;
   char *json_text = NULL;
   char *tmp_file_path = NULL;
   uint32_t json_size = 0;
@@ -436,7 +452,9 @@ main (void)
       goto _ret;
     }
 
-  fd = open_tmp_file (&tmp_file_path);
+  ext = get_ext (obj, &ext_len);
+
+  fd = open_tmp_file (&tmp_file_path, ext, ext_len);
   if (fd == -1)
     {
       fprintf (stderr, "Failed to open temporary file\n");
@@ -506,6 +524,7 @@ _ret:
   if (json_text != NULL) free (json_text);
   if (obj != NULL) cJSON_Delete (obj);
   if (text != NULL) free (text);
+  if (ext != NULL) free (ext);
 
   elog_debug ("%s exiting with exit_code = %d\n", __func__, exit_code);
   return exit_code;
