@@ -94,6 +94,10 @@ install -D -m 644 @CMAKE_CURRENT_BINARY_DIR@/@BEECTL_FIREFOX_MANIFEST_DIR@/com.r
 /@BEECTL_FIREFOX_MANIFEST_DIR@/com.ruslan_osmanov.bee.json
 
 %changelog
+* Sat Aug 15 2020 Ruslan Osmanov <rrosmanov@gmail.com> 1.2.0-1
+- Added support for custom filename extension via "ext" JSON property
+- Fixed potential double free and a leak
+- Miscellaneous tiny improvements of development files
 * Sun Nov 02 2019 Ruslan Osmanov <rrosmanov@gmail.com> 1.1.4-1
 * Fri Jan 11 2019 Ruslan Osmanov <rrosmanov@gmail.com> 1.0.0-1
 - First release
