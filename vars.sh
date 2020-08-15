@@ -1,7 +1,7 @@
 #!/bin/bash -
 # List of variables shared between install.sh and uninstall.sh
 #
-# Copyright © 2019 Ruslan Osmanov <rrosmanov@gmail.com>
+# Copyright © 2019,2020 Ruslan Osmanov <rrosmanov@gmail.com>
 
 set -e -u
 
