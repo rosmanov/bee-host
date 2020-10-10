@@ -64,6 +64,9 @@ case "$toolchain" in
         *Linux*)
             CPACK_GENERATOR='RPM;DEB;TGZ;ZIP'
             ;;
+        *Darwin*|*macos*)
+            CPACK_GENERATOR="productbuild"
+            ;;
         *)
             echo >&2 "$toolchain Didn't match anything"
     esac

@@ -64,3 +64,9 @@ _CPack_Packages/
 
 *.nsh
 !*.in
+
+.DS_Store
+/Library/
+*.dmg
+*.pkg
+/LICENSE.txt

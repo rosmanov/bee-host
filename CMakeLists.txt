@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.9)
 cmake_policy(VERSION 3.9.6)
 # CMP0048 set to NEW allows setting project VERSION via project() command
 cmake_policy(SET CMP0048 NEW)
-option(CPACK_GENERATOR "CPack generator" "RPM DEB TGZ ZIP")
+option(CPACK_GENERATOR "CPack generator" "RPM DEB TGZ ZIP productbuild")
 
 project(BeeCtl
   VERSION 1.2.0
@@ -174,6 +174,35 @@ if(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
         COMPONENT config)
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${BEECTL_FIREFOX_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
         DESTINATION "${BEECTL_FIREFOX_MANIFEST_DIR}"
+        COMPONENT config)
+elseif(uppercase_CMAKE_SYSTEM_NAME MATCHES DARWIN)
+    set(BEECTL_CHROME_MANIFEST_DIR "Library/Google/Chrome/NativeMessagingHosts")
+    set(BEECTL_FIREFOX_MANIFEST_DIR  "Library/Application Support/Mozilla/NativeMessagingHosts")
+
+    # Install host app
+    install(TARGETS beectl RUNTIME DESTINATION bin COMPONENT applications)
+
+    # productbuild doesn't accept doc files without extensions
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE"
+        "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt"
+        @ONLY)
+    set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
+
+    configure_file(
+        chrome-com.ruslan_osmanov.bee.json.in
+        "${BEECTL_CHROME_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
+        @ONLY)
+    configure_file(
+        firefox-com.ruslan_osmanov.bee.json.in
+        "${BEECTL_FIREFOX_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
+        @ONLY)
+
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${BEECTL_CHROME_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
+        DESTINATION "/${BEECTL_CHROME_MANIFEST_DIR}"
+        COMPONENT config)
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${BEECTL_FIREFOX_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
+        DESTINATION "/${BEECTL_FIREFOX_MANIFEST_DIR}"
         COMPONENT config)
 else(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
     # Install host app
