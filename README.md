@@ -6,8 +6,7 @@ A native messaging host application for [Browser's Exernal Editor extension](htt
 
 - GNU/Linux
 - Windows (MinGW binaries*)
-
-Should work fine on macOS, but I haven't tested it there yet.
+- macOS (tested on 10.15.6)
 
 # Installing
 
