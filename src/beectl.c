@@ -77,7 +77,7 @@ which (char *executable, size_t executable_size)
   assert (executable != NULL);
 
   if (is_absolute_path (executable, executable_size))
-    return executable;
+    return strdup(executable);
 
   if (unlikely ((org_path = getenv ("PATH")) == NULL))
     {
