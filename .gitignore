@@ -55,6 +55,7 @@ _CPack_Packages/
 *.Z
 /cmake_install.cmake
 /install_manifest.txt
+/.cache/
 /.ccls-cache/
 /chrome-com.ruslan_osmanov.bee.json
 /firefox-com.ruslan_osmanov.bee.json
