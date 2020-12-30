@@ -20,7 +20,6 @@
 #
 # Run all toolchains using build type 'Debug' (default):
 # ../build.sh
-
 project_dir="$(dirname "$0")"
 
 toolchain="$1"
@@ -72,7 +71,8 @@ case "$toolchain" in
     esac
 
     rm -rf CMakeCache.txt CMakeFiles
-    cmake -DCMAKE_TOOLCHAIN_FILE="$toolchain" \
+    cmake --no-warn-unused-cli \
+        -DCMAKE_TOOLCHAIN_FILE="$toolchain" \
         -DCMAKE_BUILD_TYPE="$build_type" \
         -DCPACK_GENERATOR="$CPACK_GENERATOR" "$project_dir"
     make "$@"
