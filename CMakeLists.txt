@@ -32,7 +32,7 @@ set(EXTERNAL_DIR ${CMAKE_CURRENT_BINARY_DIR}/external)
 # cJSON and cJSONUtils
 ExternalProject_Add(cjson
   GIT_REPOSITORY "https://github.com/DaveGamble/cJSON"
-  GIT_TAG "v1.7.12"
+  GIT_TAG "v1.7.14"
   PREFIX "${EXTERNAL_DIR}/cJSON"
   BUILD_IN_SOURCE 1
   TEST_COMMAND ""
