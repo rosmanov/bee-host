@@ -6,7 +6,7 @@ cmake_policy(SET CMP0048 NEW)
 option(CPACK_GENERATOR "CPack generator" "RPM DEB TGZ ZIP productbuild")
 
 project(BeeCtl
-  VERSION 1.3.1
+  VERSION 1.3.2
   DESCRIPTION "Native Messaging Host for Bee Extension"
   LANGUAGES C)
 
@@ -104,6 +104,11 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/beectl.spec.in"
   "${CMAKE_CURRENT_BINARY_DIR}/beectl.spec"
   @ONLY IMMEDIATE)
 set(CPACK_RPM_USER_BINARY_SPECFILE "${CMAKE_CURRENT_BINARY_DIR}/beectl.spec")
+
+# DEB package properties
+if(NOT CPACK_DEBIAN_PACKAGE_ARCHITECTURE)
+    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "${CMAKE_SYSTEM_PROCESSOR}")
+endif(NOT CPACK_DEBIAN_PACKAGE_ARCHITECTURE)
 
 # Install docs
 if(NOT CMAKE_DOC_DIR)
