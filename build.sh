@@ -74,7 +74,8 @@ case "$toolchain" in
         -DCMAKE_TOOLCHAIN_FILE="$toolchain" \
         -DCMAKE_BUILD_TYPE="$build_type" \
         -DCPACK_RPM_PACKAGE_SOURCES=${CPACK_RPM_PACKAGE_SOURCES:=OFF} \
-        -DCPACK_GENERATOR="$CPACK_GENERATOR" "$project_dir"
+        -DCPACK_GENERATOR="$CPACK_GENERATOR" "$project_dir" \
+        -DCPACK_PACKAGING_INSTALL_PREFIX="${CPACK_PACKAGING_INSTALL_PREFIX:=/}"
     make "$@"
     make package
 esac
