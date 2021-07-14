@@ -55,16 +55,15 @@ case "$toolchain" in
     shift $(( OPTIND - 1 ))
 
     echo "Using toolchain $toolchain in '$build_type' mode"
-    CPACK_GENERATOR=
     case "$toolchain" in
         *Windows*)
-            CPACK_GENERATOR=NSIS
+            : ${CPACK_GENERATOR:=NSIS}
             ;;
         *Linux*)
-            CPACK_GENERATOR='RPM;DEB;TGZ;ZIP'
+            : ${CPACK_GENERATOR='RPM;DEB;TGZ;ZIP'}
             ;;
         *Darwin*|*macos*)
-            CPACK_GENERATOR="productbuild"
+            : ${CPACK_GENERATOR="productbuild"}
             ;;
         *)
             echo >&2 "$toolchain Didn't match anything"
@@ -74,6 +73,7 @@ case "$toolchain" in
     cmake --no-warn-unused-cli \
         -DCMAKE_TOOLCHAIN_FILE="$toolchain" \
         -DCMAKE_BUILD_TYPE="$build_type" \
+        -DCPACK_RPM_PACKAGE_SOURCES=${CPACK_RPM_PACKAGE_SOURCES:=OFF} \
         -DCPACK_GENERATOR="$CPACK_GENERATOR" "$project_dir"
     make "$@"
     make package
