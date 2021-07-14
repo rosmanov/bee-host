@@ -10,5 +10,6 @@ ARCH := $(shell uname -m)
 srpm:
 	command -v cmake >/dev/null || dnf install -y cmake
 	command -v gcc >/dev/null || dnf install -y gcc
+	command -v git >/dev/null || dnf install -y git
 	mkdir -p $(outdir)
 	CPACK_RPM_PACKAGE_SOURCES=ON CPACK_GENERATOR=RPM ./build-linux-$(ARCH).sh -b Release && cp -a *.src*rpm $(outdir)
