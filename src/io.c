@@ -25,6 +25,7 @@
 #include "common.h"
 #include "io.h"
 #include "str.h"
+#include "mkstemps.h"
 
 #include <stdlib.h> /*  malloc free memset mkstemp mkstemps */
 #include <stdio.h> /* perror */
@@ -44,7 +45,6 @@
 #endif
 
 #define TMP_FILENAME_TEMPLATE "chrome_bee_XXXXXXXX"
-
 
 char *
 read_browser_request (uint32_t *size)

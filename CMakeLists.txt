@@ -26,6 +26,10 @@ check_function_exists(strndup HAVE_STRNDUP)
 if(HAVE_STRNDUP)
   add_definitions(-DHAVE_STRNDUP)
 endif()
+check_function_exists(mkstemps HAVE_MKSTEMPS)
+if(HAVE_MKSTEMPS)
+  add_definitions(-DHAVE_MKSTEMPS)
+endif()
 
 set(EXTERNAL_DIR ${CMAKE_CURRENT_BINARY_DIR}/external)
 
@@ -57,6 +61,7 @@ set(BEECTL_SRCS
   src/shell.c
   src/str.c
   src/io.c
+  src/mkstemps.c
   # This is nasty, but I couldn't find a way to use CMAKE_TOOLCHAIN_FILE
   # for the external project (see comments below.)
   "${CJSON_SOURCE_DIR}/cJSON.c"
