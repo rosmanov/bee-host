@@ -6,34 +6,31 @@ import sys
 
 def main():
     text = """
-aaaaQuoting @pavel.naumov's comment in HCSC-3424:
-> I'm sure that we mustn't ignore the error how it is implemented in the PR but find the root of the bug.
+Markus Kuhn [ˈmaʳkʊs kuːn] <mkuhn@acm.org> — 1999-08-20
 
-So simply ignoring the fields with empty/missing `uuid` properties isn't enough.
+The ASCII compatible UTF-8 encoding of ISO 10646 and Unicode
+plain-text files is defined in RFC 2279 and in ISO 10646-1 Annex R.
 
-I've used the following script to detect the assessment form fields without `uuid` properties:
-```
-foreach (\AssessmentForm::model()->findAll() as $form) {
-  $layoutData = \AssessmentDecorator::parseLayoutData($form->data);
-  foreach ($layoutData as $id => $item) {
-    if (!isset($item->options->uuid)) {
-      $errors++;
-      fprintf(STDERR, "Form #%s Field #{$id} UUID: ( NONE ) item: %s\n", $form->id, $id, var_export($item, true));
-    }
-  }
-}
-echo "Errors: $errors\n";
-```
+Using Unicode/UTF-8, you can write in emails and source code things such as
 
-It turned out, there was only one such field on HCSC UAT2:
-```
-Form #219 Field #0 UUID: ( NONE ) item: 0
-```
-The field (`item`) appears as a scalar `0` value! Now I wonder if we need to find out how it was possible to save such a field into the database, or just ignore it in the Assessment answer source.
+Mathematics and Sciences:
 
-sssss
+  ∮ E⋅da = Q,  n → ∞, ∑ f(i) = ∏ g(i), ∀x∈ℝ: ⌈x⌉ = −⌊−x⌋, α ∧ ¬β = ¬(¬α ∨ β),
 
-a
+  ℕ ⊆ ℕ₀ ⊂ ℤ ⊂ ℚ ⊂ ℝ ⊂ ℂ, ⊥ < a ≠ b ≡ c ≤ d ≪ ⊤ ⇒ (A ⇔ B),
+
+  2H₂ + O₂ ⇌ 2H₂O, R = 4.7 kΩ, ⌀ 200 mm
+
+Linguistics and dictionaries:
+
+  ði ıntəˈnæʃənəl fəˈnɛtık əsoʊsiˈeıʃn
+  Y [ˈʏpsilɔn], Yen [jɛn], Yoga [ˈjoːgɑ]
+
+APL:
+
+  ((V⍳V)=⍳⍴V)/V←,V    ⌷←⍳→⍴∆∇⊃‾⍎⍕⌈
+
+Nicer typography in plain text files:
     """
     editor = ""
     args = [ '-c',  ':set ft=markdown', '-c', ':set tw=12345']
