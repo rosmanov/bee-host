@@ -1,6 +1,6 @@
 /**
  * Native messaging host for Bee browser extension.
- * String utilities implementation.
+ * String utilities.
  *
  * Copyright © 2019,2020 Ruslan Osmanov <rrosmanov@gmail.com>
  *
@@ -80,13 +80,13 @@ convert_char_array_to_LPCWSTR (const char *str, int *wstr_len_in_chars)
   wchar_t *wstr = NULL;
 
   /* Determine the size required for the output buffer */
-  *wstr_len_in_chars = MultiByteToWideChar(CP_ACP, 0, str, -1, NULL, 0);
+  *wstr_len_in_chars = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0);
 
   wstr = LocalAlloc (LMEM_ZEROINIT, *wstr_len_in_chars * sizeof (wchar_t));
   if (unlikely (wstr == NULL))
     return NULL;
 
-  if (unlikely (!MultiByteToWideChar(CP_ACP, 0, str, -1, wstr, *wstr_len_in_chars)))
+  if (unlikely (!MultiByteToWideChar(CP_UTF8, 0, str, -1, wstr, *wstr_len_in_chars)))
     {
       perror ("MultiByteToWideChar");
       LocalFree (wstr);
@@ -126,12 +126,7 @@ wchar_t **convert_single_byte_to_multibyte_array (
 
   if (unlikely (!success))
     {
-      for (i = 0; i < num_args; i++)
-        {
-          if (wargs[i] == NULL)
-            break;
-          LocalFree (wargs[i]);
-        }
+      free_argsw (wargs, num_args);
       LocalFree (wargs);
       wargs = NULL;
     }

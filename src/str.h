@@ -31,6 +31,10 @@
 #include <sys/types.h> /* size_t */
 #include <stdlib.h> /* free */
 
+#ifdef WINDOWS
+# include <windows.h> /* LocalFree */
+#endif
+
 #ifndef HAVE_STRNDUP
 char *strndup (const char *s, size_t n);
 #endif
@@ -76,6 +80,37 @@ str_destroy (str_t *s)
 #ifdef WINDOWS
 wchar_t *convert_char_array_to_LPCWSTR (const char *str, int *wstr_len_in_chars);
 wchar_t **convert_single_byte_to_multibyte_array (const char * const *args, const unsigned num_args);
-#endif
+
+forceinline void
+free_argsw (wchar_t **argsw, const unsigned num_args)
+{
+  unsigned int i = 0;
+
+  if (unlikely (argsw == NULL))
+    return;
+
+  for (i = 0; i < num_args; i++)
+    {
+      if (argsw[i] != NULL)
+        LocalFree (argsw[i]);
+    }
+}
+
+forceinline void
+free_args (char **args, const unsigned num_args)
+{
+  unsigned int i = 0;
+
+  if (unlikely (args == NULL))
+    return;
+
+  for (i = 0; i < num_args; i++)
+    {
+      if (args[i] != NULL)
+        LocalFree (args[i]);
+    }
+}
+
+#endif /* WINDOWS */
 
 #endif /* __BEECTL_STR_H__ */

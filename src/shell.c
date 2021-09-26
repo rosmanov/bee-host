@@ -70,7 +70,7 @@ concat_args (const wchar_t * const *wargs, const unsigned num_args)
       if (warg == NULL)
         break;
 
-      elog_debug ("%s: processing arg %d\n", __func__, i);
+      elog_debugw (L"%s: processing arg %d: %S\n", __func__, i, warg);
 
       if (unlikely (FAILED (StringCbLengthW (warg, 4096, &len))))
         {
@@ -91,16 +91,153 @@ concat_args (const wchar_t * const *wargs, const unsigned num_args)
             }
         }
 
-      elog_debugw (L"%s: StringCchCatW %s\n", __func__, warg);
+      elog_debugw (L"%s: StringCchCatW %S\n", __func__, warg);
       StringCchCatW (res, res_size, warg);
       StringCchCatW (res, res_size, wspace);
     }
 
   elog_debugw (L"%s: processed %d num_args\n", __func__, num_args);
-  elog_debugw (L"%s: res = %s\n", __func__, res);
+  elog_debugw (L"%s: res = %S\n", __func__, res);
 
   return res;
 }
+
+#define ARG_ESCAPED_SIZE 4096
+
+/* Escapes a single command line argument. Returns NULL on error.
+   The caller is responsible for freeing the resulting string.
+
+   Note, the function iterates the characters byte by byte because it assumes
+   the arguments are either in ASCII or UTF-8, and the characters in range
+   U+0000 and U+007F (decimal 127) don't interefe with the characters of higher
+   code points (the next range starts at U+0080 (decimal 128), but this
+   function only works with ASCII characters. */
+static char *
+escape_arg (const char *arg)
+{
+#define CHECK_ARG_LENGTH(__delta) \
+  do \
+    { \
+      if (unlikely ((arg_escaped_len + (__delta)) >= ARG_ESCAPED_SIZE)) \
+        { \
+          elog_error ("argument length exceeds %d\n", ARG_ESCAPED_SIZE); \
+          return NULL; \
+        } \
+    } \
+  while (0)
+
+  const char *ch = arg;
+  char arg_escaped[ARG_ESCAPED_SIZE] = { '\0' };
+  unsigned arg_escaped_len = 0;
+  unsigned delta = 0;
+
+  if (unlikely (arg == NULL))
+    return NULL;
+
+  /* If there are no special characters in arg, no need to escape. */
+  if (strpbrk (arg, " \t\n\v\"") == NULL)
+    return strdup (arg);
+
+  /* Append opening double quote */
+  arg_escaped[arg_escaped_len++] = '"';
+
+  for (ch = arg; *ch; ++ch)
+    {
+      unsigned num_backslashes = 0;
+
+      CHECK_ARG_LENGTH (0);
+
+      for (; *ch && *ch == '\\'; ++ch, ++num_backslashes);
+
+      elog_debug ("[%s] ch = %c num_backslashes = %d\n", __func__, *ch, num_backslashes);
+
+      switch (*ch)
+        {
+        case '\0':
+          /* Escape all backslashes */
+          if (num_backslashes)
+            {
+              delta = num_backslashes * 2;
+              CHECK_ARG_LENGTH (delta);
+              memset (&arg_escaped[arg_escaped_len], '\\', delta);
+              arg_escaped_len += delta;
+            }
+          break;
+        case '\"':
+          /* Escape all backslashes and the following quotation mark */
+          delta = num_backslashes * 2 + 1;
+          CHECK_ARG_LENGTH (delta);
+          memset (&arg_escaped[arg_escaped_len], '\\', delta);
+          arg_escaped_len += delta;
+          elog_debug ("[%s] [dquote] appending %c to %s [%d]\n", __func__, *ch, arg_escaped, arg_escaped_len);
+          arg_escaped[arg_escaped_len++] = *ch;
+          break;
+        default:
+          if (num_backslashes)
+            {
+              /* Backslashes are not special */
+              CHECK_ARG_LENGTH (num_backslashes);
+              memset (&arg_escaped[arg_escaped_len], '\\', num_backslashes);
+              arg_escaped_len += num_backslashes;
+            }
+          elog_debug ("[%s] [default] appending %c to %s [%d]\n", __func__, *ch, arg_escaped, arg_escaped_len);
+          arg_escaped[arg_escaped_len++] = *ch;
+          break;
+        }
+    }
+
+  /* Append closing double quote */
+  elog_debug ("[%s] [end] appending closing dquote\n", __func__, *ch);
+  arg_escaped[arg_escaped_len++] = '"';
+  elog_debug ("[%s] [end] result: %s\n", __func__, arg_escaped);
+
+  return strndup (arg_escaped, arg_escaped_len);
+
+#undef CHECK_ARG_LENGTH
+}
+
+/* Escapes command line arguments.
+   The caller should free the resulting array. Returns NULL on error. */
+static char **
+escape_args (const char * const *args,
+             const unsigned args_num)
+{
+  bool success = true;
+  char **escaped_args = LocalAlloc (LMEM_ZEROINIT, sizeof (char*) * args_num);
+  char *escaped = NULL;
+
+  elog_debug ("[%s] called with %d args\n", __func__, args_num);
+
+  if (unlikely (escaped_args == NULL))
+    {
+      elog_error ("[%s] Failed allocating memory for escaped args\n", __func__);
+      return NULL;
+    }
+
+  for (int i = 0; i < args_num; ++i)
+    {
+      elog_debug ("[%s] escaping arg %d\n", __func__, i);
+      escaped = escape_arg (args[i]);
+
+      if (unlikely (escaped == NULL && args[i] != NULL))
+        {
+          success = false;
+          break;
+        }
+
+      elog_debug ("[%s] escaped_args[%d] = %s\n", __func__, i, escaped);
+      escaped_args[i] = escaped;
+    }
+
+  if (unlikely (!success))
+    {
+      free_args (escaped_args, args_num);
+      escaped_args = NULL;
+    }
+
+  return escaped_args;
+}
+
 #endif /* WINDOWS */
 
 int
@@ -119,6 +256,7 @@ beectl_shell_exec (const char * const *args,
   bool terminated = false;
   LPWSTR cmd = NULL;
   wchar_t **wargs = NULL;
+  char **args_escaped = NULL;
 
   sa.bInheritHandle = TRUE;
   sa.lpSecurityDescriptor = NULL;
@@ -128,21 +266,34 @@ beectl_shell_exec (const char * const *args,
   si.dwFlags = STARTF_USESHOWWINDOW;
   si.wShowWindow = SW_SHOWDEFAULT;
 
-  wargs = convert_single_byte_to_multibyte_array (args, args_num);
+  args_escaped = escape_args (args, args_num);
+  if (unlikely (args_escaped == NULL))
+    {
+      perror ("escape_args failed");
+      goto _ret;
+    }
+
+  wargs = convert_single_byte_to_multibyte_array ((const char * const *)args_escaped, args_num);
   if (unlikely (wargs == NULL))
     {
       perror ("convert_single_byte_to_multibyte_array");
-      return -1;
+      goto _ret;
     }
 
   if ((cmd = concat_args ((const wchar_t * const *)wargs, args_num)) == NULL)
     {
       perror ("concat_args");
-      return -1;
+      goto _ret;
     }
 
-  elog_debugw (L"cmd (after concat_args) = %s\n", cmd);
-  if (!CreateProcessW (wargs[0],
+  elog_debugw (L"cmd (after concat_args) = %S\n", cmd);
+  /*
+     Note, the fist argument of CreateProcessW should not be escaped (no quotes around required),
+     but it should be properly quoted within `cmd`, e.g.:
+     first arg = "C:\\Program Files\\notepad.exe"
+     cmd = "\"C:\\Program Files\\notepad.exe\" arg1 arg2 \"arg with spaces\""
+  */
+  if (!CreateProcessW (NULL,
                        cmd,
                        NULL, /* Process handle not inheritable */
                        NULL, /* Thread handle not inheritable */
@@ -179,7 +330,7 @@ beectl_shell_exec (const char * const *args,
       ExitProcess (dw_error);
       goto _ret;
     }
-  elog_debugw (L"Created process for command %s\n", cmd);
+  elog_debugw (L"Created process for command %S\n", cmd);
 
   terminated = WaitForSingleObject (pi.hProcess, INFINITE);
   elog_debug ("WaitForSingleObject() returned\n");
@@ -190,6 +341,8 @@ _ret:
   if (cmd != NULL) free (cmd);
   if (pi.hProcess) CloseHandle (pi.hProcess);
   if (pi.hThread) CloseHandle (pi.hThread);
+  if (wargs != NULL) free_argsw (wargs, args_num);
+  if (args_escaped != NULL) free_args (args_escaped, args_num);
 
   return exit_code;
 #else /* POSIX */
