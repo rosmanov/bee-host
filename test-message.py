@@ -33,9 +33,14 @@ APL:
 Nicer typography in plain text files:
     """
     editor = ""
+    # editor = "C:\\Program Files\\Common Files\\notepad.exe"
+    #editor = "C:\\Program Files\\Common Files\\notepad.exe"
+    # editor = "C:\\Windows\\space notepad.exe"
+    # editor = "C:\\Windows\\notepad.exe"
+    # editor = "notepad.exe"
     args = [ '-c',  ':set ft=markdown', '-c', ':set tw=12345']
 
-    response = json.dumps({"text": text, "editor": editor, "args": args})
+    response = json.dumps({"text": text, "editor": editor, "args": args, "ext": "txt"})
     sys.stdout.buffer.write(struct.pack('I', len(response)))
     # Write message itself
     sys.stdout.write(response)
