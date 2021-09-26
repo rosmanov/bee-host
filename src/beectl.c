@@ -8,7 +8,7 @@
  * When a subprocess of the text editor finishes, the script sends the
  * updated text back to the browser extension.
  *
- * Copyright © 2019,2020 Ruslan Osmanov <rrosmanov@gmail.com>
+ * Copyright © 2019,2020,2021 Ruslan Osmanov <rrosmanov@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the

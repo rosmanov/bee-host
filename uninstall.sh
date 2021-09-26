@@ -2,7 +2,7 @@
 #
 # Uninstall native messaging host
 #
-# Copyright © 2014-2019,2020 Ruslan Osmanov <rrosmanov@gmail.com>
+# Copyright © 2014-2019,2020,2021 Ruslan Osmanov <rrosmanov@gmail.com>
 
 set -e -u
 
