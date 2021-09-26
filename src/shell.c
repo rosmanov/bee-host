@@ -109,7 +109,7 @@ concat_args (const wchar_t * const *wargs, const unsigned num_args)
 
    Note, the function iterates the characters byte by byte because it assumes
    the arguments are either in ASCII or UTF-8, and the characters in range
-   U+0000 and U+007F (decimal 127) don't interefe with the characters of higher
+   U+0000 and U+007F (decimal 127) don't interfere with the characters of higher
    code points (the next range starts at U+0080 (decimal 128), but this
    function only works with ASCII characters. */
 static char *
