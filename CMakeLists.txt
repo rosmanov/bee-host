@@ -139,9 +139,9 @@ install(FILES LICENSE README.md DESTINATION "${CMAKE_DOC_DIR}" COMPONENT config)
 string(TOUPPER "${CMAKE_SYSTEM_NAME}" uppercase_CMAKE_SYSTEM_NAME)
 if(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
     string(REPLACE "/" "\\\\" BEECTL_NSIS_CHROME_MANIFEST_DIR
-        "${CMAKE_INSTALL_PREFIX}\\\\${BEECTL_CHROME_MANIFEST_DIR}")
+        "${BEECTL_CHROME_MANIFEST_DIR}")
     string(REPLACE "/" "\\\\" BEECTL_NSIS_FIREFOX_MANIFEST_DIR
-        "${CMAKE_INSTALL_PREFIX}\\\\${BEECTL_FIREFOX_MANIFEST_DIR}")
+        "${BEECTL_FIREFOX_MANIFEST_DIR}")
 
     # Install host app.
     #
@@ -167,8 +167,8 @@ if(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
     set(CPACK_NSIS_CONTACT "${CPACK_PACKAGE_CONTACT}")
     set(CPACK_NSIS_EXTRA_INSTALL_COMMANDS "
         WriteRegStr HKCU 'Software\\\\${PROJECT_NAME}' 'Install Directory' '$INSTDIR'
-        WriteRegStr HKCU 'Software\\\\Google\\\\Chrome\\\\NativeMessagingHosts\\\\com.ruslan_osmanov.bee' '' '$INSTDIR${BEECTL_NSIS_CHROME_MANIFEST_DIR}\\\\com.ruslan_osmanov.bee.json'
-        WriteRegStr HKCU 'Software\\\\Mozilla\\\\NativeMessagingHosts\\\\com.ruslan_osmanov.bee' '' '$INSTDIR${BEECTL_NSIS_FIREFOX_MANIFEST_DIR}\\\\com.ruslan_osmanov.bee.json'
+        WriteRegStr HKCU 'Software\\\\Google\\\\Chrome\\\\NativeMessagingHosts\\\\com.ruslan_osmanov.bee' '' '$INSTDIR\\\\${BEECTL_NSIS_CHROME_MANIFEST_DIR}\\\\com.ruslan_osmanov.bee.json'
+        WriteRegStr HKCU 'Software\\\\Mozilla\\\\NativeMessagingHosts\\\\com.ruslan_osmanov.bee' '' '$INSTDIR\\\\${BEECTL_NSIS_FIREFOX_MANIFEST_DIR}\\\\com.ruslan_osmanov.bee.json'
     ")
     set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "
         DeleteRegKey HKCU 'Software\\\\${PROJECT_NAME}'
