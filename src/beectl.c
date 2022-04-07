@@ -453,6 +453,7 @@ main (void)
     }
 
   ext = get_ext (obj, &ext_len);
+  elog_debug ("'ext': (%s) (len = %u)\n", ext, ext_len);
 
   fd = open_tmp_file (&tmp_file_path, ext, ext_len);
   if (fd == -1)

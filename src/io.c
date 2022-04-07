@@ -225,13 +225,15 @@ get_sys_temp_dir (str_t *sys_temp_dir)
           if (s[len - 1] == DIR_SEPARATOR)
             {
               sys_temp_dir->name = strndup (s, len - 1);
-              sys_temp_dir->size = len - 1;
+              sys_temp_dir->size = len; /* len - 1 (last char) + 1 (terminating 0 byte)*/
             }
           else
             {
               sys_temp_dir->name = strndup (s, len);
-              sys_temp_dir->size = len;
+              sys_temp_dir->size = len + 1 /* + 1 (terminating 0 byte)*/;
             }
+          elog_debug ("%s: name: (%s)\n", __func__, sys_temp_dir->name);
+          elog_debug ("%s: size: (%lu)\n", __func__, sys_temp_dir->size);
 
           return sys_temp_dir;
       }
@@ -277,6 +279,17 @@ open_tmp_file (char **out_path, const char* ext, unsigned ext_len)
       snprintf (tmp_file_template, tmp_file_template_size,
                 "%.*s%c" TMP_FILENAME_TEMPLATE ".%.*s",
                 (int)tmp_dir.size, tmp_dir.name, DIR_SEPARATOR, ext_len, ext);
+      elog_debug ("%s: tmp_file_template = \"%s\" "
+                  "tmp_file_template_size = %lu "
+                  "suffix_len = (%u) "
+                  "ext = (%s) "
+                  "ext_len = %u\n",
+                 __func__,
+                 tmp_file_template,
+                 tmp_file_template_size,
+                 suffix_len,
+                 ext,
+                 ext_len);
 
       fd = mkstemps (tmp_file_template, suffix_len);
       if (fd == -1)

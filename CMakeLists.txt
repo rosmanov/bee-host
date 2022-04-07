@@ -6,7 +6,7 @@ cmake_policy(SET CMP0048 NEW)
 option(CPACK_GENERATOR "CPack generator" "RPM DEB TGZ ZIP productbuild")
 
 project(BeeCtl
-  VERSION 1.3.3
+  VERSION 1.3.4
   DESCRIPTION "Native Messaging Host for Bee Extension"
   LANGUAGES C)
 
@@ -219,10 +219,10 @@ elseif(uppercase_CMAKE_SYSTEM_NAME MATCHES DARWIN)
         @ONLY)
 
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${BEECTL_CHROME_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
-        DESTINATION "/${BEECTL_CHROME_MANIFEST_DIR}"
+        DESTINATION "${BEECTL_CHROME_MANIFEST_DIR}"
         COMPONENT config)
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${BEECTL_FIREFOX_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
-        DESTINATION "/${BEECTL_FIREFOX_MANIFEST_DIR}"
+        DESTINATION "${BEECTL_FIREFOX_MANIFEST_DIR}"
         COMPONENT config)
 else(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
     # Install host app
