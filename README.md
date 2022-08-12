@@ -10,7 +10,8 @@ A native messaging host application for [Browser's Exernal Editor extension](htt
 
 # Installing
 
-Precompiled binaries can be downloaded from [SourceForge](https://sourceforge.net/projects/beectl/) or from the [releases page](https://github.com/rosmanov/bee-host/releases).
+- Precompiled binaries can be downloaded from [SourceForge](https://sourceforge.net/projects/beectl/) or from the [releases page](https://github.com/rosmanov/bee-host/releases).
+- [**FreeBSD** port](https://www.freshports.org/editors/bee-host/).
 
 ## RPM
 
