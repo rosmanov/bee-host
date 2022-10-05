@@ -101,10 +101,18 @@ set(CPACK_PACKAGE_FILE_NAME
   "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}.${CMAKE_SYSTEM_PROCESSOR}.${CMAKE_BUILD_TYPE}")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 
+string(TOUPPER "${CMAKE_SYSTEM_NAME}" uppercase_CMAKE_SYSTEM_NAME)
+
 message(STATUS "CMAKE_INSTALL_PREFIX: ${CMAKE_INSTALL_PREFIX}")
 set(BEECTL_MANIFEST_TARGET_PATH "${CMAKE_INSTALL_PREFIX}/bin/beectl")
 set(BEECTL_CHROME_MANIFEST_DIR "etc/opt/chrome/native-messaging-hosts")
-set(BEECTL_FIREFOX_MANIFEST_DIR "usr/lib/mozilla/native-messaging-hosts")
+
+if(uppercase_CMAKE_SYSTEM_NAME MATCHES LINUX AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(amd|x86_)64$")
+    # Fedora 36 amd64 may have a separate /usr/lib64 dir different from /usr/lib.
+    set(BEECTL_FIREFOX_MANIFEST_DIR "usr/lib64/mozilla/native-messaging-hosts")
+else()
+    set(BEECTL_FIREFOX_MANIFEST_DIR "usr/lib/mozilla/native-messaging-hosts")
+endif()
 
 # RPM package properties
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/beectl.spec.in"
@@ -136,7 +144,6 @@ install(FILES LICENSE README.md DESTINATION "${CMAKE_DOC_DIR}" COMPONENT config)
 
 # Install manifests
 
-string(TOUPPER "${CMAKE_SYSTEM_NAME}" uppercase_CMAKE_SYSTEM_NAME)
 if(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
     string(REPLACE "/" "\\\\" BEECTL_NSIS_CHROME_MANIFEST_DIR
         "${BEECTL_CHROME_MANIFEST_DIR}")
