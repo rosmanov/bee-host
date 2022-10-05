@@ -94,6 +94,9 @@ install -D -m 644 @CMAKE_CURRENT_BINARY_DIR@/@BEECTL_FIREFOX_MANIFEST_DIR@/com.r
 /@BEECTL_FIREFOX_MANIFEST_DIR@/com.ruslan_osmanov.bee.json
 
 %changelog
+* Wed Oct 05 2022 Ruslan Osmanov <rrosmanov@gmail.om> 1.3.5-1
+- Install Firefox manifest into /usr/lib64 instead of /usr/lib
+  on 64-bit platforms.
 * Thu Apr 07 2022 Ruslan Osmanov <rrosmanov@gmail.com> 1.3.4-1
 - Fixed trailing character truncation in the temporary file path when editor
   was obtained from TMPDIR on non-Windows platforms.
