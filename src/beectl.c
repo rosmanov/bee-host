@@ -8,7 +8,7 @@
  * When a subprocess of the text editor finishes, the script sends the
  * updated text back to the browser extension.
  *
- * Copyright © 2019,2020,2021 Ruslan Osmanov <rrosmanov@gmail.com>
+ * Copyright © 2019-2023 Ruslan Osmanov <608192+rosmanov@users.noreply.github.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -35,7 +35,7 @@
 #include "io.h"
 
 #include <stdlib.h> /* getenv, malloc, realloc, free */
-#include <string.h> /* strtok, memcpy */
+#include <string.h> /* strtok, strcmp, memcpy, printf */
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h> /* uint32_t UINT32_MAX */
@@ -52,6 +52,19 @@
    By allocating more bytes than required we are trying to reduce the number of
    memory allocation calls which are known to be slow */
 #define REALLOC_PATHNAME_STEP 128
+
+static void
+print_help ()
+{
+  printf ("%s.\n\n"
+          "Version: %s\n"
+          "Copyright: %s\n"
+          "License: %s\n",
+          PROJECT_DESCRIPTION,
+          PROJECT_VERSION,
+          PROJECT_COPYRIGHT,
+          PROJECT_LICENSE);
+}
 
 /* Works like the `which` command on Unix-like systems.
 
@@ -384,12 +397,12 @@ _ret:
   return response;
 }
 
-
 int
-main (void)
+main (int argc, char *argv[])
 {
   int fd = -1;
   int exit_code = EXIT_SUCCESS;
+  int i = 0;
   char *editor = NULL;
   char **editor_args = NULL;
   unsigned editor_args_num = 0;
@@ -403,6 +416,33 @@ main (void)
   cJSON *obj = NULL;
   const char *error = NULL;
   unsigned num_reserved_args = 1 /* tmp_file_path */;
+
+  for (i = 0; i < argc; ++i)
+    {
+      const char * const arg = argv[i];
+      int arg_len;
+
+      if (arg[0] != '-')
+        continue;
+
+      arg_len = strlen (arg);
+      if (arg_len == 2)
+        {
+          if (arg[1] == '-') /* -- */
+            break;
+          if (arg[1] == 'h') /* -h */
+            {
+              print_help ();
+              return exit_code;
+            }
+        }
+
+      if (!strcmp(arg, "--help"))
+        {
+          print_help ();
+          return exit_code;
+        }
+    }
 
   /* Set stdin to binary mode in order to avoid possible issues
    * with \r\n on Windows */

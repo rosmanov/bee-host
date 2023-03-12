@@ -1,14 +1,19 @@
-cmake_minimum_required(VERSION 3.9)
-# Policies are written for CMake version 3.9.6
-cmake_policy(VERSION 3.9.6)
-# CMP0048 set to NEW allows setting project VERSION via project() command
-cmake_policy(SET CMP0048 NEW)
+cmake_minimum_required(VERSION 3.12...3.25.2)
 option(CPACK_GENERATOR "CPack generator" "RPM DEB TGZ ZIP productbuild")
 
 project(BeeCtl
-  VERSION 1.3.5
-  DESCRIPTION "Native Messaging Host for Bee Extension"
+  VERSION 1.3.6
+  DESCRIPTION "Native Messaging Host for the Bee Browser Extension <https://github.com/rosmanov/chrome-bee>"
+  HOMEPAGE_URL "https://github.com/rosmanov/bee-host"
   LANGUAGES C)
+
+set(PROJECT_CONTACT "Ruslan Osmanov <608192+rosmanov@users.noreply.github.com>")
+set(PROJECT_LICENSE "MIT")
+
+add_compile_definitions(PROJECT_VERSION="${PROJECT_VERSION}")
+add_compile_definitions(PROJECT_DESCRIPTION="${PROJECT_DESCRIPTION}")
+add_compile_definitions(PROJECT_COPYRIGHT="\(C\) 2019-2023 ${PROJECT_CONTACT}")
+add_compile_definitions(PROJECT_LICENSE="${PROJECT_LICENSE}")
 
 # C11
 set(CMAKE_C_STANDARD 11)
@@ -36,7 +41,7 @@ set(EXTERNAL_DIR ${CMAKE_CURRENT_BINARY_DIR}/external)
 # cJSON and cJSONUtils
 ExternalProject_Add(cjson
   GIT_REPOSITORY "https://github.com/DaveGamble/cJSON"
-  GIT_TAG "v1.7.14"
+  GIT_TAG "v1.7.15"
   PREFIX "${EXTERNAL_DIR}/cJSON"
   BUILD_IN_SOURCE 1
   TEST_COMMAND ""
@@ -92,8 +97,8 @@ add_dependencies(beectl cjson)
 set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
 set(CPACK_PACKAGE_NAME "beectl")
 set(CPACK_PACKAGE_RELEASE 1)
-set(CPACK_PACKAGE_CONTACT "Ruslan Osmanov <rrosmanov@gmail.com>")
-set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/rosmanov/bee-host")
+set(CPACK_PACKAGE_CONTACT "${PROJECT_CONTACT}")
+set(CPACK_PACKAGE_HOMEPAGE_URL "${PROJECT_HOMEPAGE_URL}")
 set(CPACK_PACKAGE_INSTALL_REGISTRY_KEY "${PROJECT_NAME}")
 set(OLD_CPACK_PACKAGING_INSTALL_PREFIX "${CPACK_PACKAGING_INSTALL_PREFIX}")
 set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
