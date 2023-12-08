@@ -141,8 +141,21 @@ endif()
 #set(CPACK_RPM_USER_BINARY_SPECFILE "${CMAKE_CURRENT_BINARY_DIR}/beectl.spec")
 set(CPACK_RPM_PACKAGE_RELOCATABLE ON)
 set(CPACK_RPM_CHANGELOG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/changelog")
-set(CPACK_RPM_DEFAULT_GROUP "Development/Tools/Other")
+set(CPACK_RPM_PACKAGE_GROUP "Development Tools")
 set(CPACK_RPM_BUILDREQUIRES "git, cmake >= 3.12, make, gcc")
+set(
+    CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION
+    /usr
+    /usr/bin
+    /usr/local
+    /usr/local/bin
+    /usr/lib
+    /usr/lib/.build-id
+    "${CMAKE_INSTALL_BINDIR}"
+    "/$BEECTL_CHROME_MANIFEST_DIR"
+    "/${BEECTL_CHROME_MANIFEST_DIR}"
+    "/${BEECTL_FIREFOX_MANIFEST_DIR}"
+)
 
 list(APPEND CPACK_RPM_RELOCATION_PATHS
     "${CMAKE_INSTALL_BINDIR}"
