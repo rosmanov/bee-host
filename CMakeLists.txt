@@ -105,6 +105,21 @@ set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 set(CPACK_PACKAGE_FILE_NAME
   "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}.${CMAKE_SYSTEM_PROCESSOR}.${CMAKE_BUILD_TYPE}")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+set(CPACK_SOURCE_IGNORE_FILES
+    "/build/"
+    "/CMake/"
+    "/CMakeCache\\\\.txt.*"
+    "/CMakeFiles/"
+    "/_CPack_Packages/"
+    "\\\\.cmake$"
+    "/\\\\.(git|svn)(ignore)?/"
+    "~$"
+    "/\\\\..*/"
+    "cscope.*"
+    "/external/.*/(examples|tests|docs)/"
+    "\\\\.sw[po]$"
+    "\\\\.(gz|Z|xz|zip|log|deb|rpm|pkg|bz2|exe|msi)$"
+)
 
 string(TOUPPER "${CMAKE_SYSTEM_NAME}" uppercase_CMAKE_SYSTEM_NAME)
 

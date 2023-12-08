@@ -36,12 +36,16 @@ case "$toolchain" in
     ;;
   *)
     : ${build_type:=Debug}
+    : ${package_type:=binary}
 
-    while getopts ':b:' f
+    while getopts ':b:p:' f
     do
       case $f in
         b)
           build_type="$OPTARG"
+          ;;
+        p)
+          package_type="$OPTARG"
           ;;
         \?)
           echo >&2 "Unknown option: '$OPTARG'"
@@ -61,6 +65,7 @@ case "$toolchain" in
             ;;
         *Linux*)
             : ${CPACK_GENERATOR='RPM;DEB;TGZ;ZIP'}
+            : ${CPACK_SOURCE_GENERATOR='RPM;TGZ;ZIP'}
             ;;
         *Darwin*|*macos*)
             : ${CPACK_GENERATOR="productbuild"}
@@ -74,9 +79,23 @@ case "$toolchain" in
         -DCMAKE_TOOLCHAIN_FILE="$toolchain" \
         -DCMAKE_BUILD_TYPE="$build_type" \
         -DCPACK_RPM_PACKAGE_SOURCES=${CPACK_RPM_PACKAGE_SOURCES:=OFF} \
-        -DCPACK_GENERATOR="$CPACK_GENERATOR" "$project_dir" \
+        -DCPACK_GENERATOR="$CPACK_GENERATOR"  \
+        -DCPACK_SOURCE_GENERATOR="$CPACK_SOURCE_GENERATOR"  \
         -DCPACK_PACKAGING_INSTALL_PREFIX="${CPACK_PACKAGING_INSTALL_PREFIX:=/}" \
-        -DCPACK_INSTALLED_DIRECTORIES="${CPACK_INSTALLED_DIRECTORIES:=''}"
+        -DCPACK_INSTALLED_DIRECTORIES="${CPACK_INSTALLED_DIRECTORIES:=''}" \
+        "$project_dir"
     make "$@"
-    make package
+
+    printf 'Building %s package\n' "$package_type"
+    case "$package_type" in
+        binary)
+            make package
+            ;;
+        source)
+            make package_source
+            ;;
+        *)
+            printf >&2 'Unknown package type %s\n' "$package_type"
+            ;;
+    esac
 esac
