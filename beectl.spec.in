@@ -50,7 +50,7 @@ if [ -e $RPM_BUILD_ROOT ];
 then
   rm -rf $RPM_BUILD_ROOT
 fi
-test -d %_topdir/tmpBBroot -a $RPM_BUILD_ROOT && mv %_topdir/tmpBBroot $RPM_BUILD_ROOT
+test -d %_topdir/tmpBBroot && mv %_topdir/tmpBBroot $RPM_BUILD_ROOT
 
 target_path="$RPM_BUILD_ROOT/@BEECTL_MANIFEST_TARGET_PATH@"
 
