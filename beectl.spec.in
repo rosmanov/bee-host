@@ -39,7 +39,7 @@ Native messaging host application for "Browser's Exernal Editor" Chrome/Firefox
 extension (https://github.com/rosmanov/chrome-bee).
 
 %prep
-mv $RPM_BUILD_ROOT %_topdir/tmpBBroot
+test -d $RPM_BUILD_ROOT && mv $RPM_BUILD_ROOT %_topdir/tmpBBroot
 rm -rf "$RPM_BUILD_DIR/CMakeFiles"
 rm -f "$RPM_BUILD_DIR/CMakeCache.txt"
 
@@ -50,7 +50,7 @@ if [ -e $RPM_BUILD_ROOT ];
 then
   rm -rf $RPM_BUILD_ROOT
 fi
-mv %_topdir/tmpBBroot $RPM_BUILD_ROOT
+test -d %_topdir/tmpBBroot -a $RPM_BUILD_ROOT && mv %_topdir/tmpBBroot $RPM_BUILD_ROOT
 
 target_path="$RPM_BUILD_ROOT/@BEECTL_MANIFEST_TARGET_PATH@"
 
