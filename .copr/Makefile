@@ -13,4 +13,7 @@ srpm:
 	CPACK_INSTALLED_DIRECTORIES="$(shell pwd);./" \
 		CPACK_GENERATOR=RPM \
 		CPACK_RPM_PACKAGE_SOURCES=ON \
-		sh ./build-linux-$(ARCH).sh -b Release && cp -a beectl*.src.rpm "$(outdir)"
+		sh ./build-linux-$(ARCH).sh -b Release
+	cp -a beectl*.src.rpm "$(outdir)"
+	rm -rf CMakeCache.txt CMakeFiles/
+	git clean -f -x -d
