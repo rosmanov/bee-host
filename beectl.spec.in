@@ -7,10 +7,10 @@ License:        @PROJECT_LICENSE@
 Group:          Development/Tools/Other
 Prefix:         @CPACK_PACKAGING_INSTALL_PREFIX@
 
-%define _rpmdir @CMAKE_CURRENT_BINARY_DIR@/_CPack_Packages/Linux/RPM
+#%define _rpmdir @CMAKE_CURRENT_BINARY_DIR@/_CPack_Packages/Linux/RPM
 %define _rpmfilename @CPACK_PACKAGE_FILE_NAME@.rpm
 %define _unpackaged_files_terminate_build 0
-%define _topdir @CMAKE_CURRENT_BINARY_DIR@/_CPack_Packages/Linux/RPM
+#%define _topdir @CMAKE_CURRENT_BINARY_DIR@/_CPack_Packages/Linux/RPM
 
 @TMP_RPM_URL@
 @TMP_RPM_REQUIRES@
@@ -30,8 +30,8 @@ Prefix:         @CPACK_PACKAGING_INSTALL_PREFIX@
 
 @TMP_RPM_DEBUGINFO@
 
-%define _rpmdir %_topdir/RPMS
-%define _srcrpmdir %_topdir/SRPMS
+#%define _rpmdir %_topdir/RPMS
+#%define _srcrpmdir %_topdir/SRPMS
 @FILE_NAME_DEFINE@
 %define _unpackaged_files_terminate_build 0
 @TMP_RPM_SPEC_INSTALL_POST@
@@ -103,7 +103,7 @@ install -D -m 644 @CMAKE_CURRENT_BINARY_DIR@/@BEECTL_FIREFOX_MANIFEST_DIR@/com.r
 * Thu Apr 07 2022 @PROJECT_CONTACT@ 1.3.4-1
 - Fixed trailing character truncation in the temporary file path when editor
   was obtained from TMPDIR on non-Windows platforms.
-* Sun Sep 21 2021 @PROJECT_CONTACT@ 1.3.3-1
+* Tue Sep 21 2021 @PROJECT_CONTACT@ 1.3.3-1
 - Fixed #5: command line arguments were not escaped properly in Windows.
 * Wed Dec 30 2020 @PROJECT_CONTACT@ 1.3.1-1
 - Fixed double free (thanks to Térence Clastres)
