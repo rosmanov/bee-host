@@ -1,20 +1,22 @@
-* Sun Mar 12 2023 @PROJECT_CONTACT@ 1.3.6-1
+* Fri Dec 08 2023 Ruslan Osmanov <608192+rosmanov@users.noreply.github.com> 1.3.7-1
+- Enabled RPM Copr builds
+* Sun Mar 12 2023 Ruslan Osmanov <608192+rosmanov@users.noreply.github.com> 1.3.6-1
 - Added -h and --help CLI arguments.
 - Updated cJSON library version to v1.7.15.
-* Wed Oct 05 2022 @PROJECT_CONTACT@ 1.3.5-1
+* Wed Oct 05 2022 Ruslan Osmanov <608192+rosmanov@users.noreply.github.com> 1.3.5-1
 - Install Firefox manifest into /usr/lib64 instead of /usr/lib
   on 64-bit platforms.
-* Thu Apr 07 2022 @PROJECT_CONTACT@ 1.3.4-1
+* Thu Apr 07 2022 Ruslan Osmanov <608192+rosmanov@users.noreply.github.com> 1.3.4-1
 - Fixed trailing character truncation in the temporary file path when editor
   was obtained from TMPDIR on non-Windows platforms.
-* Tue Sep 21 2021 @PROJECT_CONTACT@ 1.3.3-1
+* Tue Sep 21 2021 Ruslan Osmanov <608192+rosmanov@users.noreply.github.com> 1.3.3-1
 - Fixed #5: command line arguments were not escaped properly in Windows.
-* Wed Dec 30 2020 @PROJECT_CONTACT@ 1.3.1-1
+* Wed Dec 30 2020 Ruslan Osmanov <608192+rosmanov@users.noreply.github.com> 1.3.1-1
 - Fixed double free (thanks to Térence Clastres)
-* Sat Aug 15 2020 @PROJECT_CONTACT@ 1.2.0-1
+* Sat Aug 15 2020 Ruslan Osmanov <608192+rosmanov@users.noreply.github.com> 1.2.0-1
 - Added support for custom filename extension via "ext" JSON property
 - Fixed potential double free and a leak
 - Miscellaneous tiny improvements of development files
-* Sat Nov 02 2019 @PROJECT_CONTACT@ 1.1.4-1
-* Fri Jan 11 2019 @PROJECT_CONTACT@ 1.0.0-1
+* Sat Nov 02 2019 Ruslan Osmanov <608192+rosmanov@users.noreply.github.com> 1.1.4-1
+* Fri Jan 11 2019 Ruslan Osmanov <608192+rosmanov@users.noreply.github.com> 1.0.0-1
 - First release
