@@ -7,10 +7,8 @@ License:        @PROJECT_LICENSE@
 Group:          Development/Tools/Other
 Prefix:         @CPACK_PACKAGING_INSTALL_PREFIX@
 
-#%define _rpmdir @CMAKE_CURRENT_BINARY_DIR@/_CPack_Packages/Linux/RPM
 %define _rpmfilename @CPACK_PACKAGE_FILE_NAME@.rpm
 %define _unpackaged_files_terminate_build 0
-#%define _topdir @CMAKE_CURRENT_BINARY_DIR@/_CPack_Packages/Linux/RPM
 
 @TMP_RPM_URL@
 @TMP_RPM_REQUIRES@
@@ -30,8 +28,6 @@ Prefix:         @CPACK_PACKAGING_INSTALL_PREFIX@
 
 @TMP_RPM_DEBUGINFO@
 
-#%define _rpmdir %_topdir/RPMS
-#%define _srcrpmdir %_topdir/SRPMS
 @FILE_NAME_DEFINE@
 %define _unpackaged_files_terminate_build 0
 @TMP_RPM_SPEC_INSTALL_POST@
