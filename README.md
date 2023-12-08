@@ -16,7 +16,7 @@ A native messaging host application for [Browser's Exernal Editor extension](htt
 
 ## RPM
 
-![Copr build](https://copr.fedorainfracloud.org/coprs/ruslan-osmanov/beectl/package/beectl/status_image/last_build.png)
+[![Copr build status](https://copr.fedorainfracloud.org/coprs/ruslan-osmanov/beectl/package/beectl/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/ruslan-osmanov/beectl/package/beectl/)
 
 [This RPM repository](https://copr.fedorainfracloud.org/coprs/ruslan-osmanov/beectl/) can be used to install beectl using a package manager such as `dnf`, e.g.:
 
