@@ -135,10 +135,6 @@ else()
 endif()
 
 # RPM package properties
-#configure_file("${CMAKE_CURRENT_SOURCE_DIR}/beectl.spec.in"
-  #"${CMAKE_CURRENT_BINARY_DIR}/beectl.spec"
-  #@ONLY IMMEDIATE)
-#set(CPACK_RPM_USER_BINARY_SPECFILE "${CMAKE_CURRENT_BINARY_DIR}/beectl.spec")
 set(CPACK_RPM_PACKAGE_RELOCATABLE ON)
 set(CPACK_RPM_CHANGELOG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/changelog")
 set(CPACK_RPM_PACKAGE_GROUP "Development Tools")
