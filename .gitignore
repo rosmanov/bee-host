@@ -34,6 +34,8 @@ tags
 /beectl.spec
 /beectl*\.sh
 /beectl*\.zip
+/beectl*\.bz2
+/beectl*\.xz
 /beectl*\.tgz
 /beectl*\.tar.gz
 /beectl*\.7z
