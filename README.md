@@ -14,6 +14,17 @@ A native messaging host application for [Browser's Exernal Editor extension](htt
 - Precompiled binaries can be downloaded from [SourceForge](https://sourceforge.net/projects/beectl/) or from the [releases page](https://github.com/rosmanov/bee-host/releases).
 - [**FreeBSD** port](https://www.freshports.org/editors/bee-host/).
 
+## macOS
+
+Download the latest `.pkg` file from the release links provided above. Then run the following commands (replace `./beectl-1.3.7-3.x86_64.Release.pkg` with the path to the downloaded package):
+```
+sudo spctl --master-disable
+sudo installer -pkg ./beectl-1.3.7-3.x86_64.Release.pkg -target /
+sudo spctl --master-enable
+```
+> [!NOTE]
+> The `spctl` commands temporarily disable macOS Gatekeeper to allow the installation of unsigned packages. I currently don’t have an individual Apple Developer license, so I can’t sign the package with an officially accepted certificate. I’m not willing to spend $99 per year just for this purpose—sorry.
+
 ## RPM
 
 [![Copr build status](https://copr.fedorainfracloud.org/coprs/ruslan-osmanov/beectl/package/beectl/status_image/last_build.png?a)](https://copr.fedorainfracloud.org/coprs/ruslan-osmanov/beectl/package/beectl/)
