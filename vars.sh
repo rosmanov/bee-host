@@ -1,7 +1,7 @@
 #!/bin/bash -
 # List of variables shared between install.sh and uninstall.sh
 #
-# Copyright © 2019-2023 Ruslan Osmanov <608192+rosmanov@users.noreply.github.com>
+# Copyright © 2019-2025 Ruslan Osmanov <608192+rosmanov@users.noreply.github.com>
 
 set -e -u
 
@@ -35,10 +35,12 @@ case "$kernel" in
     if [ $EUID == 0 ]; then
       # If superuser
       chrome_target_manifest_dir='/Library/Google/Chrome/NativeMessagingHosts'
+      chromium_target_manifest_dir='/Library/Application Support/Chromium/NativeMessagingHosts'
       firefox_target_manifest_dir='/Library/Application Support/Mozilla/NativeMessagingHosts'
     else
       # If normal user
       chrome_target_manifest_dir="$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts"
+      chromium_target_manifest_dir="$HOME/Library/Application Support/Chromium/NativeMessagingHosts"
       firefox_target_manifest_dir="$HOME/Library/Application Support/Mozilla/NativeMessagingHosts"
     fi
     ;;
@@ -46,10 +48,12 @@ case "$kernel" in
     if [ $EUID == 0 ]; then
       # If superuser
       chrome_target_manifest_dir='/etc/opt/chrome/native-messaging-hosts'
+      chromium_target_manifest_dir='/etc/chromium/native-messaging-hosts'
       firefox_target_manifest_dir='/usr/lib/mozilla/native-messaging-hosts'
     else
       # If normal user
       chrome_target_manifest_dir="$HOME/.config/google-chrome/NativeMessagingHosts"
+      chromium_target_manifest_dir="$HOME/.config/chromium/NativeMessagingHosts"
       firefox_target_manifest_dir="$HOME/.mozilla/native-messaging-hosts"
     fi
     ;;
@@ -70,6 +74,7 @@ target_file=beectl
 host_name=com.ruslan_osmanov.bee
 # Source manifest filenames
 chrome_manifest_file="chrome-${host_name}.json"
+chromium_manifest_file="chrome-${host_name}.json"
 firefox_manifest_file="firefox-${host_name}.json"
 # Target manifest filename
 target_manifest_file="${host_name}.json"

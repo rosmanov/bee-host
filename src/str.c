@@ -2,7 +2,7 @@
  * Native messaging host for Bee browser extension.
  * String utilities.
  *
- * Copyright © 2019-2023 Ruslan Osmanov <608192+rosmanov@users.noreply.github.com>
+ * Copyright © 2019-2025 Ruslan Osmanov <608192+rosmanov@users.noreply.github.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the

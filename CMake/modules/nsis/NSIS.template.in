@@ -68,7 +68,7 @@ Core_NotInstalled:
 
   ; Store installation folder.
   WriteRegStr HKCU "Software\${APP_NAME}" "Install Directory" $INSTDIR
-  ; Path to Chrome manifest file
+  ; Path to Chrome/Chromium manifest file
   WriteRegStr HKCU "Software\Google\Chrome\NativeMessagingHosts" "com.ruslan_osmanov.bee" "$INSTDIR\com.ruslan_osmanov.bee.json"
   ; Path to Firefox manifest file
   WriteRegStr HKCU "Software\Mozilla\NativeMessagingHosts" "com.ruslan_osmanov.bee" "$INSTDIR\mozilla\com.ruslan_osmanov.bee.json"
@@ -129,7 +129,7 @@ Section "Uninstall"
   ; Cleanup registry
   ; Remove entry from Windows "Add/Remove programs" panel.
   DeleteRegKey SHCTX "Software\Microsoft\Windows\Current\Version\Uninstall\${APP_NAME}"
-  ; Delete Chrome manifest path
+  ; Delete Chrome/Chromium manifest path
   DeleteRegKey HKCU "Software\Google\Chrome\NativeMessagingHosts\com.ruslan_osmanov.bee"
   ; Delete Firefox manifest path
   DeleteRegKey HKCU "Software\Mozilla\NativeMessagingHosts\com.ruslan_osmanov.bee"

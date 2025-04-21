@@ -4,7 +4,7 @@
 # Arguments:
 # $1: Optional target directory.
 #
-# Copyright © 2019-2023 Ruslan Osmanov <608192+rosmanov@users.noreply.github.com>
+# Copyright © 2019-2025 Ruslan Osmanov <608192+rosmanov@users.noreply.github.com>
 
 set -e -u
 
@@ -42,6 +42,11 @@ target_manifest_path="$chrome_target_manifest_dir/$target_manifest_file"
 ./json-patch "$dir/$chrome_manifest_file" "$json_patch" > "$tmp_manifest_file" && \
 install -D -m 0644 "$tmp_manifest_file" "$target_manifest_path" && \
   printf "Installed Chrome manifest into '%s'\n" "$target_manifest_path"
+
+target_manifest_path="$chromium_target_manifest_dir/$target_manifest_file"
+./json-patch "$dir/$chrome_manifest_file" "$json_patch" > "$tmp_manifest_file" && \
+install -D -m 0644 "$tmp_manifest_file" "$target_manifest_path" && \
+  printf "Installed Chromium manifest into '%s'\n" "$target_manifest_path"
 
 target_manifest_path="$firefox_target_manifest_dir/$target_manifest_file"
 ./json-patch "$dir/$firefox_manifest_file" "$json_patch" > "$tmp_manifest_file" && \

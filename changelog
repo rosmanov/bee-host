@@ -1,3 +1,5 @@
+* Tue Apr 21 2025 Ruslan Osmanov <608192+rosmanov@users.noreply.github.com> 1.3.7-3
+- Fixed bug #8: missing Chromium manifest file
 * Tue Dec 12 2023 Ruslan Osmanov <608192+rosmanov@users.noreply.github.com> 1.3.7-2
 - Updated package metadata
 * Fri Dec 08 2023 Ruslan Osmanov <608192+rosmanov@users.noreply.github.com> 1.3.7-1

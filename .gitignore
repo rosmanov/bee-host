@@ -64,6 +64,10 @@ _CPack_Packages/
 /etc/
 /usr/
 
+/Testing/
+/CTestTestfile.cmake
+/Testing/
+/test_beectl
 
 *.nsh
 !*.in

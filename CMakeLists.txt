@@ -6,13 +6,14 @@ project(BeeCtl
   DESCRIPTION "Native Messaging Host for the Bee Browser Extension <https://github.com/rosmanov/chrome-bee>"
   HOMEPAGE_URL "https://github.com/rosmanov/bee-host"
   LANGUAGES C)
+set(PACKAGE_RELEASE 3) # Increment this only when the package is changed, not the code of the app.
 
 set(PROJECT_CONTACT "Ruslan Osmanov <608192+rosmanov@users.noreply.github.com>")
 set(PROJECT_LICENSE "MIT")
 
-add_compile_definitions(PROJECT_VERSION="${PROJECT_VERSION}")
+add_compile_definitions(PROJECT_VERSION="${PROJECT_VERSION}-${PACKAGE_RELEASE}")
 add_compile_definitions(PROJECT_DESCRIPTION="${PROJECT_DESCRIPTION}")
-add_compile_definitions(PROJECT_COPYRIGHT="\(C\) 2019-2023 ${PROJECT_CONTACT}")
+add_compile_definitions(PROJECT_COPYRIGHT="\(C\) 2019-2025 ${PROJECT_CONTACT}")
 add_compile_definitions(PROJECT_LICENSE="${PROJECT_LICENSE}")
 
 # C11
@@ -96,7 +97,7 @@ add_dependencies(beectl cjson)
 # CPack common properties
 set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
 set(CPACK_PACKAGE_NAME "beectl")
-set(CPACK_PACKAGE_RELEASE 2)
+set(CPACK_PACKAGE_RELEASE ${PACKAGE_RELEASE})
 set(CPACK_PACKAGE_CONTACT "${PROJECT_CONTACT}")
 set(CPACK_PACKAGE_HOMEPAGE_URL "${PROJECT_HOMEPAGE_URL}")
 set(CPACK_PACKAGE_INSTALL_REGISTRY_KEY "${PROJECT_NAME}")
@@ -126,6 +127,7 @@ string(TOUPPER "${CMAKE_SYSTEM_NAME}" uppercase_CMAKE_SYSTEM_NAME)
 message(STATUS "CMAKE_INSTALL_PREFIX: ${CMAKE_INSTALL_PREFIX}")
 set(BEECTL_MANIFEST_TARGET_PATH "${CMAKE_INSTALL_PREFIX}/bin/beectl")
 set(BEECTL_CHROME_MANIFEST_DIR "etc/opt/chrome/native-messaging-hosts")
+set(BEECTL_CHROMIUM_MANIFEST_DIR "etc/chromium/native-messaging-hosts")
 
 if(uppercase_CMAKE_SYSTEM_NAME MATCHES LINUX AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(amd|x86_)64$")
     # Fedora 36 amd64 may have a separate /usr/lib64 dir different from /usr/lib.
@@ -150,14 +152,15 @@ set(
     /usr/lib
     /usr/lib/.build-id
     "${CMAKE_INSTALL_BINDIR}"
-    "/$BEECTL_CHROME_MANIFEST_DIR"
     "/${BEECTL_CHROME_MANIFEST_DIR}"
+    "/${BEECTL_CHROMIUM_MANIFEST_DIR}"
     "/${BEECTL_FIREFOX_MANIFEST_DIR}"
 )
 
 list(APPEND CPACK_RPM_RELOCATION_PATHS
     "${CMAKE_INSTALL_BINDIR}"
     "/${BEECTL_CHROME_MANIFEST_DIR}"
+    "/${BEECTL_CHROMIUM_MANIFEST_DIR}"
     "/${BEECTL_FIREFOX_MANIFEST_DIR}"
 )
 
@@ -195,6 +198,7 @@ if(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
     # Windows installer provides the choice of the destination directory.
     set(BEECTL_MANIFEST_TARGET_PATH "beectl.exe")
     install(TARGETS beectl RUNTIME DESTINATION "${BEECTL_CHROME_MANIFEST_DIR}" COMPONENT applications)
+    install(TARGETS beectl RUNTIME DESTINATION "${BEECTL_CHROMIUM_MANIFEST_DIR}" COMPONENT applications)
     install(TARGETS beectl RUNTIME DESTINATION "${BEECTL_FIREFOX_MANIFEST_DIR}" COMPONENT applications)
 
     # NSIS package properties
@@ -228,6 +232,10 @@ if(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
         "${BEECTL_CHROME_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
         @ONLY)
     configure_file(
+        chrome-com.ruslan_osmanov.bee.json.in
+        "${BEECTL_CHROMIUM_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
+        @ONLY)
+    configure_file(
         firefox-com.ruslan_osmanov.bee.json.in
         "${BEECTL_FIREFOX_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
         @ONLY)
@@ -235,11 +243,15 @@ if(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${BEECTL_CHROME_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
         DESTINATION "${BEECTL_CHROME_MANIFEST_DIR}"
         COMPONENT config)
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${BEECTL_CHROMIUM_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
+        DESTINATION "${BEECTL_CHROMIUM_MANIFEST_DIR}"
+        COMPONENT config)
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${BEECTL_FIREFOX_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
         DESTINATION "${BEECTL_FIREFOX_MANIFEST_DIR}"
         COMPONENT config)
 elseif(uppercase_CMAKE_SYSTEM_NAME MATCHES DARWIN)
     set(BEECTL_CHROME_MANIFEST_DIR "Library/Google/Chrome/NativeMessagingHosts")
+    set(BEECTL_CHROMIUM_MANIFEST_DIR "Library/Application Support/Chromium/NativeMessagingHosts")
     set(BEECTL_FIREFOX_MANIFEST_DIR  "Library/Application Support/Mozilla/NativeMessagingHosts")
 
     # Install host app
@@ -257,12 +269,19 @@ elseif(uppercase_CMAKE_SYSTEM_NAME MATCHES DARWIN)
         "${BEECTL_CHROME_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
         @ONLY)
     configure_file(
+        chrome-com.ruslan_osmanov.bee.json.in
+        "${BEECTL_CHROMIUM_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
+        @ONLY)
+    configure_file(
         firefox-com.ruslan_osmanov.bee.json.in
         "${BEECTL_FIREFOX_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
         @ONLY)
 
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${BEECTL_CHROME_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
         DESTINATION "${BEECTL_CHROME_MANIFEST_DIR}"
+        COMPONENT config)
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${BEECTL_CHROMIUM_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
+        DESTINATION "${BEECTL_CHROMIUM_MANIFEST_DIR}"
         COMPONENT config)
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${BEECTL_FIREFOX_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
         DESTINATION "${BEECTL_FIREFOX_MANIFEST_DIR}"
@@ -276,12 +295,19 @@ else(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
         "${BEECTL_CHROME_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
         @ONLY)
     configure_file(
+        chrome-com.ruslan_osmanov.bee.json.in
+        "${BEECTL_CHROMIUM_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
+        @ONLY)
+    configure_file(
         firefox-com.ruslan_osmanov.bee.json.in
         "${BEECTL_FIREFOX_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
         @ONLY)
 
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${BEECTL_CHROME_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
         DESTINATION "${BEECTL_CHROME_MANIFEST_DIR}"
+        COMPONENT config)
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${BEECTL_CHROMIUM_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
+        DESTINATION "${BEECTL_CHROMIUM_MANIFEST_DIR}"
         COMPONENT config)
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${BEECTL_FIREFOX_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
         DESTINATION "${BEECTL_FIREFOX_MANIFEST_DIR}"

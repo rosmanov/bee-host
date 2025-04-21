@@ -2,7 +2,7 @@
 #
 # Uninstall native messaging host
 #
-# Copyright © 2014-2019-2023 Ruslan Osmanov <608192+rosmanov@users.noreply.github.com>
+# Copyright © 2014-2025 Ruslan Osmanov <608192+rosmanov@users.noreply.github.com>
 
 set -e -u
 
@@ -18,6 +18,7 @@ restore_vars_cache
 readonly files=( \
   "$target_dir/$target_file" \
   "$chrome_target_manifest_dir/$target_manifest_file" \
+  "$chromium_target_manifest_dir/$target_manifest_file" \
   "$firefox_target_manifest_dir/$target_manifest_file" \
   )
 printf 'Removing %s\n' "${files[*]}"
