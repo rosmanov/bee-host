@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12...3.25.2)
+cmake_minimum_required(VERSION 3.12.0...4.0.1)
 option(CPACK_GENERATOR "CPack generator" "RPM DEB TGZ ZIP productbuild")
 
 project(BeeCtl
@@ -42,7 +42,7 @@ set(EXTERNAL_DIR ${CMAKE_CURRENT_BINARY_DIR}/external)
 # cJSON and cJSONUtils
 ExternalProject_Add(cjson
   GIT_REPOSITORY "https://github.com/DaveGamble/cJSON"
-  GIT_TAG "v1.7.15"
+  GIT_TAG "v1.7.18"
   PREFIX "${EXTERNAL_DIR}/cJSON"
   BUILD_IN_SOURCE 1
   TEST_COMMAND ""
@@ -53,6 +53,7 @@ ExternalProject_Add(cjson
     -DENABLE_CJSON_TEST=Off
     -DENABLE_CJSON_UTILS=On
     -DENABLE_TARGET_EXPORT=On
+    -DCMAKE_POLICY_VERSION_MINIMUM=3.5
   )
 ExternalProject_Get_Property(cjson source_dir)
 ExternalProject_Get_Property(cjson binary_dir)
@@ -175,10 +176,16 @@ set(CPACK_DEBIAN_PACKAGE_RELEASE, "${CPACK_PACKAGE_RELEASE}")
 set(CPACK_DEBIAN_PACKAGE_SECTION "web")
 
 # Install docs
-if(NOT CMAKE_DOC_DIR)
-    set(CMAKE_DOC_DIR usr/share/doc/osmanov/beectl)
-    list(APPEND CPACK_RPM_RELOCATION_PATHS "${CMAKE_DOC_DIR}")
-endif(NOT CMAKE_DOC_DIR)
+if(uppercase_CMAKE_SYSTEM_NAME MATCHES DARWIN)
+    if(NOT CMAKE_DOC_DIR)
+        set(CMAKE_DOC_DIR "Library/Application Support/beectl")
+    endif(NOT CMAKE_DOC_DIR)
+else()
+    if(NOT CMAKE_DOC_DIR)
+        set(CMAKE_DOC_DIR usr/share/doc/osmanov/beectl)
+        list(APPEND CPACK_RPM_RELOCATION_PATHS "${CMAKE_DOC_DIR}")
+    endif(NOT CMAKE_DOC_DIR)
+endif()
 install(FILES LICENSE README.md DESTINATION "${CMAKE_DOC_DIR}" COMPONENT config)
 
 # Install manifests
@@ -255,7 +262,7 @@ elseif(uppercase_CMAKE_SYSTEM_NAME MATCHES DARWIN)
     set(BEECTL_FIREFOX_MANIFEST_DIR  "Library/Application Support/Mozilla/NativeMessagingHosts")
 
     # Install host app
-    install(TARGETS beectl RUNTIME DESTINATION bin COMPONENT applications)
+    install(TARGETS beectl RUNTIME DESTINATION usr/local/bin COMPONENT applications)
 
     # productbuild doesn't accept doc files without extensions
     configure_file(
