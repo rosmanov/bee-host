@@ -59,6 +59,10 @@ _CPack_Packages/
 /install_manifest.txt
 /.cache/
 /.ccls-cache/
+# Copy .ccls.macos.template to .ccls for macOS
+# if your editor uses ccls and it doesn't detect the needed headers and libraries.
+# On Linux, there might be no need in that.
+/.ccls
 /chrome-com.ruslan_osmanov.bee.json
 /firefox-com.ruslan_osmanov.bee.json
 /etc/
