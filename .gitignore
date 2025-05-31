@@ -5,6 +5,7 @@ tags
 /build/
 /compile_commands.json
 /.clangd/
+_deps
 
 *.msi
 *.idt
