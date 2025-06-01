@@ -1,4 +1,4 @@
-#!/bin/bash -
+#!/bin/sh
 # Accepts optional path to toolchain (./CMake/Toolchain-*.cmake) as $1.
 # If $1 is specified, rebuilds the target pointed by the toolchain. Otherwise,
 # rebuilds targets specified by all ./CMake/Toolchain-*.cmake files.
@@ -20,39 +20,58 @@
 #
 # Run all toolchains using build type 'Debug' (default):
 # ../build.sh
-project_dir="$(dirname "$0")"
+
+get_project_dir() {
+    # Resolve absolute path to the script
+    script="$0"
+    while [ -h "$script" ]; do
+        ls_output=$(ls -ld "$script")
+        link=$(expr "$ls_output" : '.*-> \(.*\)$')
+        case "$link" in
+            /*) script="$link" ;;
+            *) script="$(dirname "$script")/$link" ;;
+        esac
+    done
+
+    printf '%s\n' "$(cd "$(dirname "$script")" && pwd)"
+}
+
+project_dir="$(get_project_dir)"
 
 toolchain="$1"
 shift
 
-: ${toolchain:=all}
+[ -z "$toolchain" ] && toolchain="all"
+
+# Default: use 'build' directory only if we're in the project root.
+build_dir=''
+cwd="$(pwd)"
+# If run from project root, default to 'build'.
+printf 'Checking if cwd (%s) = project_dir (%s)\n' "$cwd" "$project_dir"
+if [ "$cwd" = "$project_dir" ]; then
+    printf 'Using default build directory: %s\n' "$project_dir/build"
+    build_dir='build'
+fi
 
 case "$toolchain" in
   all)
     for t in "$project_dir/CMake/Toolchain-"*.cmake ; do
       echo Processing "$t"
-      "$0" "$t" "$@"
+      "$script" "$t" "$@"
     done
     ;;
   *)
-    : ${build_type:=Debug}
-    : ${package_type:=binary}
+    build_type='Debug'
+    package_type='binary'
 
-    while getopts ':b:p:' f
+    while getopts ':b:p:d:' opt
     do
-      case $f in
-        b)
-          build_type="$OPTARG"
-          ;;
-        p)
-          package_type="$OPTARG"
-          ;;
-        \?)
-          echo >&2 "Unknown option: '$OPTARG'"
-          ;;
-        :)
-          echo >&2 "Option -$OPTARG requires an argument."
-          ;;
+      case "$opt" in
+        b) build_type="$OPTARG" ;;
+        p) package_type="$OPTARG" ;;
+        d) build_dir="$OPTARG" ;;
+        \?) echo >&2 "Unknown option: '$OPTARG'" ;;
+        :) echo >&2 "Option -$OPTARG requires an argument." ;;
       esac
     done
     # Shift the last option
@@ -61,7 +80,7 @@ case "$toolchain" in
     echo "Using toolchain $toolchain in '$build_type' mode"
     case "$toolchain" in
         *Windows*)
-            : ${CPACK_GENERATOR:=NSIS}
+            : ${CPACK_GENERATOR:='NSIS'}
             ;;
         *Linux*)
             : ${CPACK_GENERATOR='RPM;DEB;TGZ;ZIP'}
@@ -74,6 +93,15 @@ case "$toolchain" in
             echo >&2 "$toolchain Didn't match anything"
     esac
 
+    if [ -n "$build_dir" ]; then
+        printf 'Using build directory: %s\n' "$build_dir"
+        mkdir -p "$build_dir" || exit 10
+        cd "$build_dir" || exit 10
+    else
+        build_dir="$(pwd)"
+        printf 'Using current directory as build directory: %s\n' "$build_dir"
+    fi
+
     rm -rf CMakeCache.txt CMakeFiles
     cmake --no-warn-unused-cli \
         -DCMAKE_TOOLCHAIN_FILE="$toolchain" \
@@ -84,18 +112,30 @@ case "$toolchain" in
         -DCPACK_PACKAGING_INSTALL_PREFIX="${CPACK_PACKAGING_INSTALL_PREFIX:=/}" \
         -DCPACK_INSTALLED_DIRECTORIES="${CPACK_INSTALLED_DIRECTORIES:=''}" \
         "$project_dir"
+
+    # Create symlink to compile_commands.json
+    src_compile_commands="$(pwd)/compile_commands.json"
+    dst_compile_commands="$project_dir/compile_commands.json"
+
+    if [ -f "$src_compile_commands" ]; then
+        current_link=$(readlink "$dst_compile_commands" 2>/dev/null)
+        if [ "$current_link" != "$src_compile_commands" ]; then
+            echo "Linking compile_commands.json to project root"
+            ln -sf "$src_compile_commands" "$dst_compile_commands"
+        fi
+    else
+        echo "⚠️  $src_compile_commands not found. Skipping symlink."
+    fi
+
     make "$@"
 
     printf 'Building %s package\n' "$package_type"
     case "$package_type" in
-        binary)
-            make package
-            ;;
-        source)
-            make package_source
-            ;;
-        *)
-            printf >&2 'Unknown package type %s\n' "$package_type"
-            ;;
+        binary) make package ;;
+        source) make package_source ;;
+        *) printf >&2 'Unknown package type %s\n' "$package_type" ;;
     esac
+    ;;
 esac
+
+# vim: ft=bash
