@@ -29,11 +29,13 @@
 #include <stdio.h> /* FILE */
 #include <stdbool.h>
 #include "common.h"
+#include "str.h"
 
 #ifdef NDEBUG
 # define elog_debug(...) ((void) 0)
 # define elog_debugw(...) ((void) 0)
 #else
+# warning "NDEBUG is not defined"
 # define elog_debug(...) fprintf (stderr, __VA_ARGS__)
 # define elog_debugw(...) fwprintf (stderr, __VA_ARGS__)
 #endif
@@ -67,9 +69,15 @@ char *read_file_from_stream (FILE *stream, size_t *len);
 /* Creates and opens a temporary file.
    Returns file descriptor.
    On error, -1 is returned, and errno is set appropriately */
-int open_tmp_file (char **out_path, const char* ext, unsigned ext_len);
+int open_tmp_file (char **out_path, str_t *tmp_dir, const char* ext, unsigned ext_len);
 
 /* Removes file from filesystem */
 bool remove_file (const char* filename);
+
+/* Generates response for the browser */
+char *make_response (int fd, uint32_t *size);
+
+/* Sends response to the browser */
+void send_file_response(const char *filepath);
 
 #endif /* __BEECTL_IO_H__ */

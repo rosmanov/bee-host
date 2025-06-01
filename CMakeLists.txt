@@ -2,27 +2,26 @@ cmake_minimum_required(VERSION 3.12.0...4.0.1)
 option(CPACK_GENERATOR "CPack generator" "RPM DEB TGZ ZIP productbuild")
 
 project(BeeCtl
-  VERSION 1.3.7
+  VERSION 1.4.0
   DESCRIPTION "Native Messaging Host for the Bee Browser Extension <https://github.com/rosmanov/chrome-bee>"
   HOMEPAGE_URL "https://github.com/rosmanov/bee-host"
   LANGUAGES C)
-set(PACKAGE_RELEASE 3) # Increment this only when the package is changed, not the code of the app.
+set(PACKAGE_RELEASE 1) # Increment this only when the package is changed, not the code of the app.
 
 set(PROJECT_CONTACT "Ruslan Osmanov <608192+rosmanov@users.noreply.github.com>")
 set(PROJECT_LICENSE "MIT")
 
-add_compile_definitions(PROJECT_VERSION="${PROJECT_VERSION}-${PACKAGE_RELEASE}")
-add_compile_definitions(PROJECT_DESCRIPTION="${PROJECT_DESCRIPTION}")
-add_compile_definitions(PROJECT_COPYRIGHT="\(C\) 2019-2025 ${PROJECT_CONTACT}")
-add_compile_definitions(PROJECT_LICENSE="${PROJECT_LICENSE}")
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Force static library build")
 
 # C11
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 
 include(CheckCSourceCompiles)
 include(CheckFunctionExists)
-include(ExternalProject)
+include(ExternalProject) # TODO Replace with FetchContent
+include(FetchContent)
 
 check_c_source_compiles("
 int main(void) { if (__builtin_expect(0, 0)) return 1; return 0; }
@@ -35,6 +34,10 @@ endif()
 check_function_exists(mkstemps HAVE_MKSTEMPS)
 if(HAVE_MKSTEMPS)
   add_definitions(-DHAVE_MKSTEMPS)
+endif()
+check_function_exists(basename HAVE_BASENAME)
+if(HAVE_BASENAME)
+  add_definitions(-DHAVE_BASENAME)
 endif()
 
 set(EXTERNAL_DIR ${CMAKE_CURRENT_BINARY_DIR}/external)
@@ -62,13 +65,26 @@ set(CJSON_SOURCE_DIR "${source_dir}")
 set(CJSON_BINARY_DIR "${binary_dir}")
 set(CJSON_DOWNLOAD_DIR "${download_dir}")
 
+FetchContent_Declare(
+    libuv
+    GIT_REPOSITORY https://github.com/libuv/libuv.git
+    GIT_TAG "v1.51.0"
+)
+set(LIBUV_BUILD_TESTS OFF CACHE INTERNAL "")
+set(LIBUV_BUILD_BENCH OFF CACHE INTERNAL "")
+set(LIBUV_BUILD_EXAMPLES OFF CACHE INTERNAL "")
+set(LIBUV_BUILD_SHARED OFF CACHE INTERNAL "")
+set(LIBUV_INSTALL OFF CACHE INTERNAL "")
+FetchContent_MakeAvailable(libuv)
+FetchContent_GetProperties(libuv)
+
 # beectl
 set(BEECTL_SRCS
   src/beectl.c
-  src/shell.c
   src/str.c
   src/io.c
   src/mkstemps.c
+  src/basename.c
   # This is nasty, but I couldn't find a way to use CMAKE_TOOLCHAIN_FILE
   # for the external project (see comments below.)
   "${CJSON_SOURCE_DIR}/cJSON.c"
@@ -81,9 +97,30 @@ add_executable(beectl ${BEECTL_SRCS})
 add_custom_command(TARGET beectl PRE_BUILD
     BYPRODUCTS "${CJSON_SOURCE_DIR}/cJSON.c"
     COMMAND touch "${CJSON_SOURCE_DIR}/cJSON.c")
+if(APPLE)
+add_custom_command(TARGET beectl POST_BUILD
+    COMMAND strip -x $<TARGET_FILE:beectl>
+    COMMENT "Stripping local symbols to reduce binary size"
+)
+endif(APPLE)
 
 target_compile_features(beectl PRIVATE c_variadic_macros)
+target_compile_options(beectl PRIVATE
+  "$<$<CONFIG:Release>:-Os;-ffunction-sections;-fdata-sections;-DNDEBUG>"
+)
 target_include_directories(beectl PRIVATE "${CJSON_DOWNLOAD_DIR}")
+target_include_directories(beectl PRIVATE "${libuv_SOURCE_DIR}/include")
+
+target_compile_definitions(beectl PRIVATE
+  PROJECT_VERSION="${PROJECT_VERSION}-${PACKAGE_RELEASE}"
+  PROJECT_DESCRIPTION="${PROJECT_DESCRIPTION}"
+  PROJECT_COPYRIGHT="\(C\) 2019-2025 ${PROJECT_CONTACT}"
+  PROJECT_LICENSE="${PROJECT_LICENSE}"
+)
+
+# Setting BUILD_SHARED_LIBS=OFF is not enough. The libuv project
+# defines both uv and uv_a targets regardless of the BUILD_SHARED_LIBS.
+target_link_libraries(beectl PRIVATE uv_a)
 set_property(TARGET beectl PROPERTY C_STANDARD 11) # C11
 add_dependencies(beectl cjson)
 
@@ -122,6 +159,8 @@ set(CPACK_SOURCE_IGNORE_FILES
     "\\\\.sw[po]$"
     "\\\\.(gz|Z|xz|zip|log|deb|rpm|pkg|bz2|exe|msi)$"
 )
+# Limit packaging to only the specified components.
+set(CPACK_COMPONENTS_ALL applications config)
 
 string(TOUPPER "${CMAKE_SYSTEM_NAME}" uppercase_CMAKE_SYSTEM_NAME)
 

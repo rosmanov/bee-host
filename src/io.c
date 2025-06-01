@@ -30,6 +30,7 @@
 #include <stdlib.h> /*  malloc free memset mkstemp mkstemps */
 #include <stdio.h> /* perror */
 #include <string.h> /* memset */
+#include <errno.h>
 #include <assert.h>
 #include <fcntl.h> /* setmode, _O_CREAT/_O_CREAT/_O_EXCL/_O_APPEND */
 #include <sys/types.h>
@@ -44,7 +45,28 @@
 # include <unistd.h>
 #endif
 
+#include "cjson/cJSON.h"
+
 #define TMP_FILENAME_TEMPLATE "chrome_bee_XXXXXXXX"
+
+/* Reads exactly `count` bytes from the file descriptor `fd` into `buf`.
+   Returns the number of bytes read, or -1 on error.
+   If the end of file is reached before reading `count` bytes, returns the number of bytes read. */
+static ssize_t
+safe_read (int fd, void *buf, size_t count)
+{
+  size_t n = 0;
+
+  while (n < count)
+    {
+      ssize_t r = read (fd, (char *)buf + n, count - n);
+      if (r <= 0)
+        return r;
+      n += r;
+    }
+
+  return n;
+}
 
 char *
 read_browser_request (uint32_t *size)
@@ -52,9 +74,9 @@ read_browser_request (uint32_t *size)
   char *text = NULL;
 
   /* First 4 bytes is the message type */
-  if (read (STDIN_FILENO, (char *) size, 4) <= 0)
+  if (safe_read (STDIN_FILENO, size, 4) != 4)
     {
-      perror ("Failed to read request size");
+      elog_error ("Failed to read request size\n");
       return text;
     }
 
@@ -64,9 +86,9 @@ read_browser_request (uint32_t *size)
       return text;
     }
 
-  if (read (STDIN_FILENO, text, *size) != *size)
+  if (safe_read (STDIN_FILENO, text, *size) != *size)
     {
-      perror ("Failed to read request body");
+      elog_error ("Failed to read request body\n");
       free (text);
       return NULL;
     }
@@ -91,20 +113,22 @@ read_file_from_fd (int fd, size_t *len)
   if (unlikely (lseek (fd, 0, SEEK_SET) == -1))
     {
       perror ("lseek");
+      elog_error ("Failed to lseek to 0: %s\n", strerror (errno));
       return NULL;
     }
 
   text = malloc (*len + 1);
   if (unlikely (text == NULL))
     {
-      perror ("malloc");
+      elog_error ("Failed to allocate memory for read buffer: %s\n", strerror (errno));
       return NULL;
     }
   memset (text, 0, *len + 1);
 
-  if (read (fd, text, *len) == -1)
+  if (safe_read (fd, text, *len) != *len)
     {
-      perror ("read");
+      elog_error ("Failed to read %zu bytes file from fd: %s\n",
+                  *len, strerror (errno));
       free (text);
       return NULL;
     }
@@ -120,6 +144,7 @@ read_file_from_stream (FILE *stream, size_t *len)
 {
   char *text = NULL;
   size_t bytes_read = 0;
+  long fsize;
 
   if (unlikely (fseek (stream, 0, SEEK_END) != 0))
     {
@@ -127,12 +152,14 @@ read_file_from_stream (FILE *stream, size_t *len)
       return NULL;
     }
 
-  *len = ftell (stream);
-  if (unlikely (*len == -1))
+  /* Read into a long to avoid overflow issues with large files */
+  fsize = ftell (stream);
+  if (unlikely (fsize == -1L))
     {
-      perror ("ftell");
+      elog_error ("ftell failed: %s\n", strerror (errno));
       return NULL;
     }
+  *len = (size_t)fsize;
 
   /* Reserve space for terminating null byte */
   text = malloc (*len + 1);
@@ -198,7 +225,7 @@ wide_char_to_multibyte (const wchar_t *in, size_t in_len, size_t *out_len)
 
 
 /* Returns the system temporary directory */
-str_t *
+static str_t *
 get_sys_temp_dir (str_t *sys_temp_dir)
 {
   if (unlikely (sys_temp_dir == NULL))
@@ -249,27 +276,32 @@ get_sys_temp_dir (str_t *sys_temp_dir)
 
 
 int
-open_tmp_file (char **out_path, const char* ext, unsigned ext_len)
+open_tmp_file (char **out_path, str_t *tmp_dir, const char* ext, unsigned ext_len)
 {
   int fd = -1;
-  str_t tmp_dir = { 0 };
   size_t tmp_file_template_size = 0;
   char *tmp_file_template = NULL;
   const unsigned suffix_len = ext_len ? 1 + ext_len : 0;
 
-  if (unlikely (get_sys_temp_dir (&tmp_dir) == NULL))
+  if (unlikely (tmp_dir == NULL))
     {
-      perror ("get_sys_temp_dir");
+      elog_error ("tmp_dir is NULL\n");
       return -1;
     }
 
-  tmp_file_template_size = (tmp_dir.size - 1) +
+  if (unlikely (get_sys_temp_dir (tmp_dir) == NULL))
+    {
+      elog_error ("get_sys_temp_dir() failed: %s\n", strerror (errno));
+      return -1;
+    }
+
+  tmp_file_template_size = (tmp_dir->size - 1) +
     DIR_SEPARATOR_LEN + sizeof (TMP_FILENAME_TEMPLATE) + suffix_len;
 
   tmp_file_template = malloc (tmp_file_template_size);
   if (unlikely (tmp_file_template == NULL))
     {
-      perror ("malloc");
+      elog_error ("malloc failed: %s\n", strerror (errno));
       goto _ret;
     }
   memset (tmp_file_template, 0, tmp_file_template_size);
@@ -278,7 +310,7 @@ open_tmp_file (char **out_path, const char* ext, unsigned ext_len)
     {
       snprintf (tmp_file_template, tmp_file_template_size,
                 "%.*s%c" TMP_FILENAME_TEMPLATE ".%.*s",
-                (int)tmp_dir.size, tmp_dir.name, DIR_SEPARATOR, ext_len, ext);
+                (int)tmp_dir->size, tmp_dir->name, DIR_SEPARATOR, ext_len, ext);
       elog_debug ("%s: tmp_file_template = \"%s\" "
                   "tmp_file_template_size = %lu "
                   "suffix_len = (%u) "
@@ -293,24 +325,37 @@ open_tmp_file (char **out_path, const char* ext, unsigned ext_len)
 
       fd = mkstemps (tmp_file_template, suffix_len);
       if (fd == -1)
-        perror("mktemps");
+        {
+          if (errno == EEXIST)
+              elog_error ("mkstemps: Temporary file already exists: %s\n", tmp_file_template);
+          else
+              elog_error ("mkstemps: Failed to create temporary file: %s\n", strerror (errno));
+          goto _ret;
+        }
     }
   else
     {
       snprintf (tmp_file_template, tmp_file_template_size,
                 "%.*s%c" TMP_FILENAME_TEMPLATE,
-                (int)tmp_dir.size, tmp_dir.name, DIR_SEPARATOR);
+                (int)tmp_dir->size, tmp_dir->name, DIR_SEPARATOR);
 
       fd = mkstemp (tmp_file_template);
       if (fd == -1)
-        perror("mktemp");
+        {
+          if (errno == EEXIST)
+              elog_error ("mkstemp: Temporary file already exists: %s\n", tmp_file_template);
+          else
+              elog_error ("mkstemp: Failed to create temporary file: %s\n", strerror (errno));
+          goto _ret;
+        }
     }
 
+  elog_debug ("%s: tmp_file_template = \"%s\" "
+              "tmp_file_template_size = %lu\n",
+              __func__, tmp_file_template, tmp_file_template_size);
   *out_path = tmp_file_template;
 
 _ret:
-  str_destroy (&tmp_dir);
-
   if (fd == -1)
     {
       if (tmp_file_template != NULL)
@@ -337,3 +382,99 @@ remove_file (const char* filename)
   return true;
 }
 
+char *
+make_response (int fd, uint32_t *size)
+{
+  size_t text_len = 0;
+  char *text = NULL;
+  char *response = NULL;
+  const char *error = NULL;
+  cJSON *json_response = NULL;
+  cJSON *json_text = NULL;
+
+  text = read_file_from_fd (fd, &text_len);
+  if (unlikely (text == NULL))
+    goto _ret;
+
+  json_text = cJSON_CreateStringReference (text);
+  if (unlikely (json_text == NULL))
+    goto _ret;
+
+  json_response = cJSON_CreateObject();
+  if (unlikely (json_response == NULL))
+    {
+      cJSON_Delete (json_text);
+      json_text = NULL;
+      goto _ret;
+    }
+
+  if (unlikely (!cJSON_AddItemReferenceToObject (json_response, "text", json_text)))
+    {
+      error = cJSON_GetErrorPtr ();
+      if (error != NULL)
+        elog_error ("Failed adding 'text' to JSON response: %s\n", error);
+      cJSON_Delete (json_text);
+      json_text = NULL;
+      goto _ret;
+    }
+  /* From this point, json_text is owned by json_response */
+
+  response = cJSON_PrintUnformatted (json_response);
+  if (unlikely (response == NULL))
+    {
+      if ((error = cJSON_GetErrorPtr ()) != NULL)
+        elog_error ("Failed converting JSON to string: %s\n", error);
+      goto _ret;
+    }
+
+  *size = strlen (response) + 1;
+
+_ret:
+  if (text != NULL) free (text);
+  if (json_response != NULL) cJSON_Delete (json_response);
+
+  return response;
+}
+
+void
+send_file_response (const char *filepath)
+{
+  int fd = -1;
+  char *response = NULL;
+  uint32_t json_size = 0;
+
+  fd = open (filepath, O_RDWR | O_APPEND | O_EXCL, S_IWRITE | S_IREAD);
+  if (fd == -1)
+    {
+      elog_error ("%s: Failed to open file %s: %s\n",
+                 __func__, filepath, strerror (errno));
+      goto _ret;
+    }
+
+  elog_debug ("%s: making response\n", __func__);
+
+  response = make_response (fd, &json_size);
+  close(fd);
+
+  if (response == NULL)
+    {
+      elog_debug ("Failed to create response\n");
+      goto _ret;
+    }
+
+  json_size--; /* exclude trailing \0 */
+
+  elog_debug ("writing response size\n");
+  if (unlikely (write (STDOUT_FILENO, &json_size, sizeof (uint32_t)) != sizeof (uint32_t)))
+    {
+      elog_error ("Failed to write response size: %s\n", strerror (errno));
+      goto _ret;
+    }
+
+  elog_debug ("writing response body (length %u)\n", json_size);
+  if (unlikely (write (STDOUT_FILENO, response, json_size) != json_size))
+    elog_error ("Failed to write response body: %s\n", strerror (errno));
+
+_ret:
+  if (response != NULL) free (response);
+}

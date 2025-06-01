@@ -72,7 +72,10 @@ str_destroy (str_t *s)
   if (s)
     {
       if (s->name != NULL)
-        free (s->name);
+      {
+          free (s->name);
+          s->name = NULL;
+      }
       s->name = NULL;
     }
 }

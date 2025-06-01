@@ -33,6 +33,7 @@
 #include "shell.h"
 #include "str.h"
 #include "io.h"
+#include "basename.h"
 
 #include <stdlib.h> /* getenv, malloc, realloc, free */
 #include <string.h> /* strtok, strcmp, memcpy, printf */
@@ -42,16 +43,31 @@
 #include <assert.h> /* static_assert, assert */
 #include <sys/stat.h>
 #include <fcntl.h> /* O_BINARY */
-#ifndef WINODWS
+#ifndef WINDOWS
 # include <unistd.h>
 #endif
 
+#include <uv.h>
 #include "cjson/cJSON.h"
 
 /* The number of extra bytes for pathname realloc()s.
    By allocating more bytes than required we are trying to reduce the number of
    memory allocation calls which are known to be slow */
 #define REALLOC_PATHNAME_STEP 128
+
+/* Used to coalesce multiple rapid file events into a single logical change. */
+#define FILE_CHANGE_DEBOUNCE_DELAY_MS 100
+
+/* Used to delay the watcher to avoid phantom editor open events. */
+#define FILE_WATCH_INITIAL_DELAY_MS 300
+
+uv_loop_t *loop;
+uv_fs_event_t fs_event;
+uv_timer_t debounce_timer;
+uv_timer_t watch_start_timer;
+bool debounce_timer_started = false;
+char *tmp_file_path = NULL;
+str_t tmp_file_dir = { 0 };
 
 static void
 print_help ()
@@ -137,8 +153,8 @@ which (char *executable, size_t executable_size)
       /* Build pathname */
       memset (pathname, 0, pathname_size);
       memcpy (pathname, dir, dir_len);
-      static_assert (DIR_SEPARATOR_LEN == sizeof (char),
-                    "DIR_SEPARATOR is expected to be a char");
+      static_assert (DIR_SEPARATOR_LEN == 1,
+                    "DIR_SEPARATOR is expected to be 1");
       pathname[dir_len] = DIR_SEPARATOR;
       memcpy (pathname + dir_len + DIR_SEPARATOR_LEN,
               executable, executable_size);
@@ -179,7 +195,7 @@ get_editor (const cJSON *obj)
   if (editor_text == NULL)
     return NULL;
 
-  return which (editor_text, strlen (editor_text) + sizeof (""));
+  return which (editor_text, strlen (editor_text) + 1);
 }
 
 
@@ -241,7 +257,7 @@ get_editor_args (const cJSON *value,
   memset (args, 0, length * sizeof (char *));
   *num_args = length;
 
-  args[x++] = editor;
+  args[x++] = strdup (editor);
 
   cJSON_ArrayForEach (arg_obj, args_obj)
     {
@@ -353,48 +369,72 @@ get_alternative_editor ()
   return NULL;
 }
 
-static char *
-make_response (int fd, uint32_t *size)
+static void
+on_file_change_debounced (uv_timer_t *handle)
 {
-  size_t text_len = 0;
-  char *text = read_file_from_fd (fd, &text_len);
-  char *response = NULL;
-  const char *error = NULL;
-  cJSON *json_response = NULL;
-  cJSON *json_text = NULL;
+  elog_debug ("%s: debounced file change confirmed\n", __func__);
+  debounce_timer_started = false;
 
-  if (unlikely (text == NULL))
-    return NULL;
+  elog_debug ("%s: sending response to the browser\n", __func__);
+  if (tmp_file_path != NULL)
+    send_file_response (tmp_file_path);
+}
 
-  json_text = cJSON_CreateStringReference (text);
-  if (unlikely (json_text == NULL))
-    return NULL;
+static void
+on_file_change (uv_fs_event_t *handle,
+                const char *filename,
+                int events,
+                int status)
+{
+  if (filename == NULL || strcmp (filename, basename (tmp_file_path)) != 0)
+    return;
 
-  json_response = cJSON_CreateObject();
-  if (unlikely (json_response == NULL))
+  if (status < 0)
     {
-      cJSON_Delete (json_text);
-      return NULL;
+      elog_error ("Watch error: %s\n", uv_strerror (status));
+      return;
     }
 
-  cJSON_AddItemReferenceToObject (json_response, "text", json_text);
+  elog_debug ("Raw file event: %s (events: %d)\n", filename, events);
 
-  response = cJSON_PrintUnformatted (json_response);
-  if (response == NULL)
+  if (debounce_timer_started)
+    uv_timer_stop (&debounce_timer);
+
+  uv_timer_start (&debounce_timer, on_file_change_debounced,
+                  FILE_CHANGE_DEBOUNCE_DELAY_MS, 0);
+  debounce_timer_started = true;
+}
+
+/* Editor process exit callback */
+static void
+on_editor_process_exit (uv_process_t *req,
+                 int64_t exit_status,
+                 int term_signal)
+{
+  elog_debug ("editor process exited with status %lld\n", exit_status);
+  uv_fs_event_stop (&fs_event);
+  uv_close ((uv_handle_t *)req, NULL);
+  uv_stop (loop);
+}
+
+static void
+start_file_watch_cb (uv_timer_t *timer)
+{
+  int res;
+
+  /* Watch the directory of the temp file because many editors such as
+   *vim and code don't modify the inode of the file; instead, they write the
+   updated content to a temporary file, delete the original, rename the new
+   file to the original name (inode is destroyed and not being watched). */
+  res = uv_fs_event_start (&fs_event, on_file_change, tmp_file_dir.name, 0);
+  if (unlikely (res < 0))
     {
-      if ((error = cJSON_GetErrorPtr ()) != NULL)
-        fprintf (stderr, "Failed converting JSON to string: %s\n", error);
-      goto _ret;
+      elog_error ("Failed to start fs_event: %s\n", uv_strerror (res));
     }
 
-  *size = strlen (response) + sizeof ("");
-
-_ret:
-  free (text);
-  cJSON_Delete (json_text);
-  cJSON_Delete (json_response);
-
-  return response;
+  elog_debug ("Started watching file: %s\n", tmp_file_path);
+  uv_timer_stop (timer);
+  uv_close ((uv_handle_t *) timer, NULL);
 }
 
 int
@@ -403,6 +443,7 @@ main (int argc, char *argv[])
   int fd = -1;
   int exit_code = EXIT_SUCCESS;
   int i = 0;
+  int res = -1;
   char *editor = NULL;
   char **editor_args = NULL;
   unsigned editor_args_num = 0;
@@ -411,11 +452,12 @@ main (int argc, char *argv[])
   char *ext = NULL;
   unsigned ext_len = 0;
   char *json_text = NULL;
-  char *tmp_file_path = NULL;
   uint32_t json_size = 0;
   cJSON *obj = NULL;
   const char *error = NULL;
   unsigned num_reserved_args = 1 /* tmp_file_path */;
+  uv_process_t child_proc;
+  uv_process_options_t proc_options = { 0 };
 
   for (i = 0; i < argc; ++i)
     {
@@ -457,7 +499,7 @@ main (int argc, char *argv[])
     {
       error = cJSON_GetErrorPtr ();
       if (error != NULL)
-        fprintf (stderr, "Failed parsing browser request: %s\n", error);
+        elog_error ("Failed parsing browser request: %s\n", error);
       exit_code = EXIT_FAILURE;
       goto _ret;
     }
@@ -471,7 +513,7 @@ main (int argc, char *argv[])
     }
   if (editor == NULL)
     {
-      fprintf (stderr, "Editor not found\n");
+      elog_error ("Editor not found\n");
       exit_code = EXIT_FAILURE;
       goto _ret;
     }
@@ -480,14 +522,14 @@ main (int argc, char *argv[])
                                  num_reserved_args, editor);
   if (editor_args == NULL)
     {
-      fprintf (stderr, "Couldn't get editor arguments\n");
+      elog_error ("Couldn't get editor arguments\n");
       exit_code = EXIT_FAILURE;
       goto _ret;
     }
 
   if ((text = get_text (obj, &text_len)) == NULL)
     {
-      fprintf (stderr, "Failed to read 'text' value\n");
+      elog_error ("Failed to read 'text' value\n");
       exit_code = EXIT_FAILURE;
       goto _ret;
     }
@@ -495,10 +537,10 @@ main (int argc, char *argv[])
   ext = get_ext (obj, &ext_len);
   elog_debug ("'ext': (%s) (len = %u)\n", ext, ext_len);
 
-  fd = open_tmp_file (&tmp_file_path, ext, ext_len);
+  fd = open_tmp_file (&tmp_file_path, &tmp_file_dir, ext, ext_len);
   if (fd == -1)
     {
-      fprintf (stderr, "Failed to open temporary file\n");
+      elog_error ("Failed to open temporary file\n");
       exit_code = EXIT_FAILURE;
       goto _ret;
     }
@@ -519,40 +561,81 @@ main (int argc, char *argv[])
     }
   fd = -1;
 
-  beectl_shell_exec ((const char * const*) editor_args, editor_args_num);
+  loop = uv_default_loop ();
 
-  elog_debug ("%s: making response\n", __func__);
-
-  fd = open (tmp_file_path, O_RDWR | O_APPEND | O_EXCL,
-             S_IWRITE | S_IREAD);
-  if (unlikely (fd == -1))
+  res = uv_fs_event_init (loop, &fs_event);
+  if (unlikely (res < 0))
     {
-      perror("open");
+      elog_error ("Failed to init fs_event: %s\n", uv_strerror (res));
+      exit_code = EXIT_FAILURE;
+      goto _ret;
+    }
+  res = uv_timer_init (loop, &debounce_timer);
+  if (unlikely (res < 0))
+    {
+      elog_error ("Failed to init debounce timer: %s\n", uv_strerror (res));
+      exit_code = EXIT_FAILURE;
+      goto _ret;
+    }
+  res = uv_timer_init (loop, &watch_start_timer);
+  if (unlikely (res < 0))
+    {
+      elog_error ("Failed to init watch_start_timer: %s\n", uv_strerror (res));
+      exit_code = EXIT_FAILURE;
+      goto _ret;
+    }
+  /* Delay file watching to avoid getting events on the newly created file
+     which may happen if the editor touches or read-locks the file, triggers background
+     processes taht open the file, create swap or backup files sometimes modifying the mtime. */
+  uv_timer_start (&watch_start_timer, start_file_watch_cb, FILE_WATCH_INITIAL_DELAY_MS, 0);
+
+  if (unlikely (editor_args_num == 0 || editor_args[0] == NULL))
+    {
+      elog_error ("Invalid editor arguments\n");
+      exit_code = EXIT_FAILURE;
       goto _ret;
     }
 
-  free (json_text);
-  json_text = make_response (fd, &json_size);
-  json_size-- /* length = size_in_bytes - 1 */;
+  proc_options.args = editor_args;
+  proc_options.file = editor_args[0];
+  proc_options.exit_cb = on_editor_process_exit;
+  proc_options.flags = UV_PROCESS_WINDOWS_HIDE; /* Hide the terminal window on Windows. */
+  proc_options.stdio_count = 0;
+  proc_options.cwd = NULL;
+  proc_options.env = NULL;
 
-  elog_debug ("writing response size\n");
-  if (unlikely (write (STDOUT_FILENO, (char *) &json_size, sizeof (uint32_t)) != sizeof (uint32_t)))
+  elog_debug ("%s: spawning editor process\n", __func__);
+  res = uv_spawn (loop, &child_proc, &proc_options);
+  if (res < 0)
     {
-      perror ("write");
+      elog_error ("Failed to spawn editor process: %s\n", uv_strerror (res));
+      exit_code = EXIT_FAILURE;
       goto _ret;
     }
 
-  elog_debug ("writing response body %s\n", json_text);
-  if (unlikely (write (STDOUT_FILENO, json_text, json_size) != json_size))
-    perror ("write");
+  elog_debug ("%s: running event loop\n", __func__);
+  uv_run (loop, UV_RUN_DEFAULT);
+
+  elog_debug ("%s: stopping event loop\n", __func__);
+  uv_fs_event_stop (&fs_event);
+  if (uv_loop_alive (loop))
+    uv_loop_close (loop);
+
+  if (unlikely (tmp_file_path == NULL || access (tmp_file_path, F_OK) != 0))
+    {
+      elog_error ("Temporary file was not found after editor exited\n");
+      exit_code = EXIT_FAILURE;
+      goto _ret;
+    }
+
+  elog_debug ("%s: sending response\n", __func__);
+  send_file_response (tmp_file_path);
 
 _ret:
   if (fd != -1) close (fd);
   if (tmp_file_path != NULL)
     remove_file (tmp_file_path);
 
-  if (editor != NULL && (!editor_args || editor != editor_args[0]))
-    free (editor);
   if (editor_args)
     {
       for (unsigned i = 0; i < editor_args_num; i++)
@@ -562,10 +645,12 @@ _ret:
         }
       free (editor_args);
     }
+  if (editor != NULL) free (editor);
   if (json_text != NULL) free (json_text);
   if (obj != NULL) cJSON_Delete (obj);
   if (text != NULL) free (text);
   if (ext != NULL) free (ext);
+  str_destroy (&tmp_file_dir);
 
   elog_debug ("%s exiting with exit_code = %d\n", __func__, exit_code);
   return exit_code;
