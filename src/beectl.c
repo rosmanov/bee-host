@@ -40,6 +40,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h> /* uint32_t UINT32_MAX */
+#include <inttypes.h>
 #include <assert.h> /* static_assert, assert */
 #include <sys/stat.h>
 #include <fcntl.h> /* O_BINARY */
@@ -411,7 +412,7 @@ on_editor_process_exit (uv_process_t *req,
                  int64_t exit_status,
                  int term_signal)
 {
-  elog_debug ("editor process exited with status %lld\n", exit_status);
+  elog_debug ("editor process exited with status %" PRId64 "\n", exit_status);
   uv_fs_event_stop (&fs_event);
   uv_close ((uv_handle_t *)req, NULL);
   uv_stop (loop);
