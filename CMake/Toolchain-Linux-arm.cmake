@@ -1,8 +1,8 @@
 set(CMAKE_SYSTEM_NAME Linux)
-set(CMAKE_SYSTEM_PROCESSOR arm)
+set(CMAKE_SYSTEM_PROCESSOR arm64)
 
-set(CMAKE_C_COMPILER gcc)
-set(CMAKE_CXX_COMPILER g++)
+set(CMAKE_C_COMPILER arm-linux-gnueabihf-gcc)
+set(CMAKE_CXX_COMPILER arm-linux-gnueabihf-g++)
 
 set(BEECTL_HOST arm-hardfloat-eabi)
 
