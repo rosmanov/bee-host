@@ -2,6 +2,7 @@ CVS
 tags
 .ropeproject*
 /external/*
+/artifacts/
 /build/
 /compile_commands.json
 /.clangd/

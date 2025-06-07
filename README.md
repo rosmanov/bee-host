@@ -1,128 +1,156 @@
-# About
+# Bee Native Messaging Host
 
-A native messaging host application for [Browser's Exernal Editor extension](https://github.com/rosmanov/chrome-bee).
+A native messaging host application for the [Browser's External Editor extension](https://github.com/rosmanov/chrome-bee).
 
 ## Supported Operating Systems
 
-- GNU/Linux
+- Linux
 - Windows (MinGW binaries*)
 - macOS (tested on 10.15.6 and 15.3.1)
 - FreeBSD
 
-# Installing
+> [!NOTE]
+> Windows builds are cross-compiled using MinGW.
+> Linux builds might also be cross-compiled using Docker.
 
-- Precompiled binaries can be downloaded from [SourceForge](https://sourceforge.net/projects/beectl/) or from the [releases page](https://github.com/rosmanov/bee-host/releases).
-- [**FreeBSD** port](https://www.freshports.org/editors/bee-host/).
+---
 
-## macOS
+## Installation
 
-Download the latest `.pkg` file from the release links provided above. Then run the following commands (replace `./beectl-1.3.7-3.x86_64.Release.pkg` with the path to the downloaded package):
-```
+### Precompiled Binaries
+
+- Available via [SourceForge](https://sourceforge.net/projects/beectl/) or the [GitHub Releases page](https://github.com/rosmanov/bee-host/releases).
+- [FreeBSD Port](https://www.freshports.org/editors/bee-host/)
+- RPM packages available via [Copr](https://copr.fedorainfracloud.org/coprs/ruslan-osmanov/beectl/).
+
+### macOS
+
+Download the latest `.pkg` file from the release links above. Then run the following (replace the filename with your actual download):
+
+```bash
 sudo spctl --master-disable
 sudo installer -pkg ./beectl-1.3.7-3.x86_64.Release.pkg -target /
 sudo spctl --master-enable
 ```
-> [!NOTE]
-> The `spctl` commands temporarily disable macOS Gatekeeper to allow the installation of unsigned packages. I currently don’t have an individual Apple Developer license, so I can’t sign the package with an officially accepted certificate. I’m not willing to spend $99 per year just for this purpose—sorry.
 
-## RPM
+> [!NOTE]
+> Gatekeeper is temporarily disabled due to the lack of an official Apple Developer certificate. This project is not signed with an Apple-issued certificate to avoid the $99/year developer fee.
+
+### RPM (Fedora/Centos/openSUSE)
 
 [![Copr build status](https://copr.fedorainfracloud.org/coprs/ruslan-osmanov/beectl/package/beectl/status_image/last_build.png?a)](https://copr.fedorainfracloud.org/coprs/ruslan-osmanov/beectl/package/beectl/)
 
-[This RPM repository](https://copr.fedorainfracloud.org/coprs/ruslan-osmanov/beectl/) can be used to install beectl using a package manager such as `dnf`, e.g.:
+Enable the repository and install:
 
 ```bash
 sudo dnf copr enable ruslan-osmanov/beectl
 sudo dnf install --refresh beectl
 ```
 
-Alternatively, download the file from SourceForge or GitHub, then install it:
+Alternatively, manually install the RPM:
 
-```
-rpm -Uvh --nodeps beectl-$VERSION.$ARCH.$RELEASE.rpm
-```
-where `$VERSION` is the package and release version, `$ARCH` is the architecture name, e.g.
-
-```
-rpm -Uvh --nodeps beectl-1.0.0-1.amd64.Release.rpm
+```bash
+rpm -Uvh --nodeps beectl-<VERSION>.<ARCH>.Release.rpm
 ```
 
-## DEB
+### DEB (Debian/Ubuntu)
 
-```
-dpkg -i beectl-$VERSION.$ARCH.$RELEASE.deb
-```
+Install the package:
 
-e.g.
-
-```
-dpkg -i beectl-1.0.0-1.amd64.Release.deb
+```bash
+dpkg -i beectl-<VERSION>.<ARCH>.Release.deb
 ```
 
-# Uninstalling
+---
 
-## RPM
+## Uninstallation
 
-```
-rpm -e beectl-$VERSION.$ARCH.rpm
-```
-where `$VERSION` is the package and release version, `$ARCH` is the architecture name.
+### RPM
 
-## DEB
-
-Using apt:
-```
-apt purge beectl
+```bash
+sudo rpm -e beectl
 ```
 
-# Building Manually
+### DEB
 
-Build system is based on CMake toolchains (`CMake/Toolchain-*.cmake`) using *GCC* compiler for GNU/Linux and a *MinGW* port of GCC for Windows. The host is supposed to be a GNU/Linux system.
-
-## 64-bit GNU/Linux (amd64)
-
+```bash
+sudo apt purge beectl
 ```
+
+---
+
+## Building from Source
+
+The project uses CMake and platform-specific toolchains located in `CMake/Toolchain-*.cmake`. The default compiler is GCC for Linux and MinGW-GCC for Windows.
+
+### Cross-Compilation
+
+To cross-compile for different platforms, you can use the `build-cross.sh` script. This script requires Docker to be installed and configured:
+
+```bash
+./build-cross.sh
+```
+
+### Native Linux (amd64)
+
+```bash
 ./build-linux-amd64.sh -b Release
 ```
 
-## 32-bit GNU/Linux (i386)
+### Native Linux (i386)
 
-```
+```bash
 ./build-linux-i386.sh -b Release
 ```
 
-## 64-bit GNU/Linux (amd64)
+### Cross-Compilation for Windows (i686)
 
-```
-./build-linux-amd64.sh -b Release
-```
-
-## 32-bit Windows (i686)
-
-```
+```bash
 ./build-win-i686.sh -b Release
 ```
 
-## Other CPU Architectures
+### Other Architectures
 
-Build scripts/toolchains for other CPU architectures can be added upon request.
+Custom toolchains can be used as follows:
 
-Path to a custom toolchain can be passed to `build.sh` script as follows:
-
-```
+```bash
 ./build.sh /path/to/custom-toolchain.cmake -b Release
 ```
 
-## Debug Version
+Toolchains for other CPU architectures can be added on request.
 
-`./build.sh` builds debug version by default (if the build type is not specified with `-b` option). Build type can also be passed explicitly using `-b` option, e.g.:
+### Debug Builds
 
-```
+By default, `./build.sh` builds a debug version if `-b` is not specified. Example:
+
+```bash
 ./build.sh all -b Debug
 ```
 
-(The command above iterates through `all` `Toolchain-*.cmake` toolchains in the `CMake` directory.)
+This will iterate over all `Toolchain-*.cmake` files in the `CMake` directory.
 
-# Packaging
+To cross-compile for all platforms, you can use:
 
-After building the project, run `make package`. The command should run CPack with a generator matching the current CMake toolchain (e.g. RPM for GNU/Linux, NSIS for Windows etc.) As a result, a package should be generated in the project root.
+```bash
+./build-cross.sh -b Debug
+```
+
+---
+
+## Packaging
+
+The build scripts (`build.sh`, `build-cross.sh` and others) automatically generate CPack configuration files.
+
+To manually create a package, you can run:
+
+```bash
+make package
+```
+
+CPack will generate a package appropriate to your current platform (e.g., RPM, DEB, NSIS).
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
+Copyright (C) 2019–2025 Ruslan Osmanov.
