@@ -21,22 +21,19 @@
 # Run all toolchains using build type 'Debug' (default):
 # ../build.sh
 
-get_project_dir() {
-    # Resolve absolute path to the script
-    script="$0"
-    while [ -h "$script" ]; do
-        ls_output=$(ls -ld "$script")
-        link=$(expr "$ls_output" : '.*-> \(.*\)$')
-        case "$link" in
-            /*) script="$link" ;;
-            *) script="$(dirname "$script")/$link" ;;
-        esac
-    done
+# Resolve absolute path to the script
+script="$0"
+while [ -h "$script" ]; do
+    ls_output=$(ls -ld "$script")
+    link=$(expr "$ls_output" : '.*-> \(.*\)$')
+    case "$link" in
+        /*) script="$link" ;;
+        *) script="$(dirname "$script")/$link" ;;
+    esac
+done
+project_dir="$(cd "$(dirname "$script")" && pwd)"
 
-    printf '%s\n' "$(cd "$(dirname "$script")" && pwd)"
-}
-
-project_dir="$(get_project_dir)"
+. "${project_dir}/helpers.sh"
 
 toolchain="$1"
 shift
@@ -55,11 +52,19 @@ fi
 
 case "$toolchain" in
   all)
-    for t in "$project_dir/CMake/Toolchain-"*.cmake ; do
-      echo Processing "$t"
-      "$script" "$t" "$@"
-    done
-    ;;
+      for t in "$project_dir/CMake/Toolchain-"*.cmake ; do
+          case "$(basename "$t")" in
+              *macos*)
+                  if [ "$(get_os)" != "$OS_MACOS" ]; then
+                      echo >&2 "Skipping $t on non-macOS host"
+                      continue
+                  fi
+                  ;;
+          esac
+          echo Processing "$t"
+          sh "$script" "$t" "$@"
+      done
+      ;;
   *)
     build_type='Debug'
     package_type='binary'
@@ -90,7 +95,9 @@ case "$toolchain" in
             : ${CPACK_GENERATOR="productbuild"}
             ;;
         *)
-            echo >&2 "$toolchain Didn't match anything"
+            echo >&2 "⚠️ Unknown toolchain: $toolchain"
+            CPACK_GENERATOR='TGZ'  # fallback
+            ;;
     esac
 
     if [ -n "$build_dir" ]; then
@@ -102,7 +109,7 @@ case "$toolchain" in
         printf 'Using current directory as build directory: %s\n' "$build_dir"
     fi
 
-    rm -rf CMakeCache.txt CMakeFiles
+    rm -rf CMakeCache.txt CMakeFiles _CPack_Packages external
     cmake --no-warn-unused-cli \
         -DCMAKE_TOOLCHAIN_FILE="$toolchain" \
         -DCMAKE_BUILD_TYPE="$build_type" \
