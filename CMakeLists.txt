@@ -350,7 +350,11 @@ if(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
     #${PROJECT_SOURCE_DIR}/CMake/modules/nsis/NSIS.definitions.nsh.in
     #NSIS.definitions.nsh
     #)
-
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/beectl.wxs.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/beectl.wxs"
+        @ONLY
+    )
     configure_file(
         chrome-com.ruslan_osmanov.bee.json.in
         "${BEECTL_CHROME_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"

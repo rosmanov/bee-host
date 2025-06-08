@@ -42,6 +42,8 @@ _deps
 /beectl*\.tar.gz
 /beectl*\.7z
 /beectl*\.tar
+# beectl.wxs is auto-generated from beectl.wxs.in
+/beectl.wxs
 /json-patch
 /tmp-manifest.json
 
