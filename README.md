@@ -61,6 +61,17 @@ Install the package:
 dpkg -i beectl-<VERSION>.<ARCH>.Release.deb
 ```
 
+### Windows
+
+For the `x86_64` (`amd64`) and `i686` (32-bit) architectures, download the latest `.exe` file from the release links above. The installer will automatically register the host with the browser.
+
+For `arm64`, there is no native Windows build available. However, you can use the `i686` version on Windows 10 or the `amd64` version on Windows 11, which will run in emulation mode.
+
+> [!NOTE]
+> It is possible to build the application for `arm64` natively, but, at the time of writing, there is no official support for this architecture in the Windows build scripts.
+> Cross-compilation for `arm64` is not yet implemented because the MinGW toolchain does not support it. Building for `arm64` natively on Windows is possible but requires a Windows ARM64 machine
+> with build tools installed, which is not available in the maintainer's CI/CD environment.
+
 ---
 
 ## Uninstallation
