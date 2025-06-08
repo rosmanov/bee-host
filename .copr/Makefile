@@ -10,5 +10,5 @@ ARCH := $(shell uname -m)
 srpm:
 	dnf install -y cmake gcc git
 	mkdir -p "$(outdir)"
-	./build-linux-$(ARCH).sh -b Release -p source
-	cp -a *.src.rpm "$(outdir)"
+	./build-linux-$(ARCH).sh -b Release -p source -d build
+	cp -a build/*.src.rpm "$(outdir)"
