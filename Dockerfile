@@ -65,36 +65,37 @@ RUN bash build.sh CMake/Toolchain-Linux-aarch64.cmake -d "${BEECTL_BUILD_DIR}" -
 
 FROM base AS final
 WORKDIR /artifacts
-COPY --from=build-linux-amd64     ${BEECTL_BUILD_DIR}/*.rpm ./
-COPY --from=build-linux-amd64     ${BEECTL_BUILD_DIR}/*.deb ./
-COPY --from=build-linux-amd64     ${BEECTL_BUILD_DIR}/*.zip ./
-COPY --from=build-linux-amd64     ${BEECTL_BUILD_DIR}/*.tgz ./
-COPY --from=build-linux-amd64     ${BEECTL_BUILD_DIR}/*.tar.gz ./
+RUN mkdir -p ./linux ./windows
+COPY --from=build-linux-amd64     ${BEECTL_BUILD_DIR}/*.rpm ./linux/
+COPY --from=build-linux-amd64     ${BEECTL_BUILD_DIR}/*.deb ./linux/
+COPY --from=build-linux-amd64     ${BEECTL_BUILD_DIR}/*.zip ./linux/
+COPY --from=build-linux-amd64     ${BEECTL_BUILD_DIR}/*.tgz ./linux/
+COPY --from=build-linux-amd64     ${BEECTL_BUILD_DIR}/*.tar.gz ./linux/
 
-COPY --from=build-aarch64-cross "${BEECTL_BUILD_DIR}"/*.rpm ./
-COPY --from=build-aarch64-cross "${BEECTL_BUILD_DIR}"/*.deb ./
-COPY --from=build-aarch64-cross "${BEECTL_BUILD_DIR}"/*.zip ./
-COPY --from=build-aarch64-cross "${BEECTL_BUILD_DIR}"/*.tgz ./
-COPY --from=build-aarch64-cross "${BEECTL_BUILD_DIR}"/*.tar.gz ./
+COPY --from=build-aarch64-cross "${BEECTL_BUILD_DIR}"/*.rpm ./linux/
+COPY --from=build-aarch64-cross "${BEECTL_BUILD_DIR}"/*.deb ./linux/
+COPY --from=build-aarch64-cross "${BEECTL_BUILD_DIR}"/*.zip ./linux/
+COPY --from=build-aarch64-cross "${BEECTL_BUILD_DIR}"/*.tgz ./linux/
+COPY --from=build-aarch64-cross "${BEECTL_BUILD_DIR}"/*.tar.gz ./linux/
 
-COPY --from=build-linux-i386      ${BEECTL_BUILD_DIR}/*.rpm ./
-COPY --from=build-linux-i386      ${BEECTL_BUILD_DIR}/*.deb ./
-COPY --from=build-linux-i386      ${BEECTL_BUILD_DIR}/*.zip ./
-COPY --from=build-linux-i386      ${BEECTL_BUILD_DIR}/*.tgz ./
-COPY --from=build-linux-i386      ${BEECTL_BUILD_DIR}/*.tar.gz ./
+COPY --from=build-linux-i386      ${BEECTL_BUILD_DIR}/*.rpm ./linux/
+COPY --from=build-linux-i386      ${BEECTL_BUILD_DIR}/*.deb ./linux/
+COPY --from=build-linux-i386      ${BEECTL_BUILD_DIR}/*.zip ./linux/
+COPY --from=build-linux-i386      ${BEECTL_BUILD_DIR}/*.tgz ./linux/
+COPY --from=build-linux-i386      ${BEECTL_BUILD_DIR}/*.tar.gz ./linux/
 
-COPY --from=build-ppc64le-cross   ${BEECTL_BUILD_DIR}/*.rpm ./
-COPY --from=build-ppc64le-cross   ${BEECTL_BUILD_DIR}/*.deb ./
-COPY --from=build-ppc64le-cross   ${BEECTL_BUILD_DIR}/*.zip ./
-COPY --from=build-ppc64le-cross   ${BEECTL_BUILD_DIR}/*.tgz ./
-COPY --from=build-ppc64le-cross   ${BEECTL_BUILD_DIR}/*.tar.gz ./
-COPY --from=build-arm-cross       ${BEECTL_BUILD_DIR}/*.rpm ./
-COPY --from=build-arm-cross       ${BEECTL_BUILD_DIR}/*.deb ./
-COPY --from=build-arm-cross       ${BEECTL_BUILD_DIR}/*.zip ./
-COPY --from=build-arm-cross       ${BEECTL_BUILD_DIR}/*.tgz ./
-COPY --from=build-arm-cross       ${BEECTL_BUILD_DIR}/*.tar.gz ./
+COPY --from=build-ppc64le-cross   ${BEECTL_BUILD_DIR}/*.rpm ./linux/
+COPY --from=build-ppc64le-cross   ${BEECTL_BUILD_DIR}/*.deb ./linux/
+COPY --from=build-ppc64le-cross   ${BEECTL_BUILD_DIR}/*.zip ./linux/
+COPY --from=build-ppc64le-cross   ${BEECTL_BUILD_DIR}/*.tgz ./linux/
+COPY --from=build-ppc64le-cross   ${BEECTL_BUILD_DIR}/*.tar.gz ./linux/
+COPY --from=build-arm-cross       ${BEECTL_BUILD_DIR}/*.rpm ./linux/
+COPY --from=build-arm-cross       ${BEECTL_BUILD_DIR}/*.deb ./linux/
+COPY --from=build-arm-cross       ${BEECTL_BUILD_DIR}/*.zip ./linux/
+COPY --from=build-arm-cross       ${BEECTL_BUILD_DIR}/*.tgz ./linux/
+COPY --from=build-arm-cross       ${BEECTL_BUILD_DIR}/*.tar.gz ./linux/
 
-COPY --from=build-windows-i686    ${BEECTL_BUILD_DIR}/*.zip ./
-COPY --from=build-windows-i686    ${BEECTL_BUILD_DIR}/*.exe ./
-COPY --from=build-windows-amd64   ${BEECTL_BUILD_DIR}/*.zip ./
-COPY --from=build-windows-amd64   ${BEECTL_BUILD_DIR}/*.exe ./
+COPY --from=build-windows-i686    ${BEECTL_BUILD_DIR}/*.zip ./windows/
+COPY --from=build-windows-i686    ${BEECTL_BUILD_DIR}/*.exe ./windows/
+COPY --from=build-windows-amd64   ${BEECTL_BUILD_DIR}/*.zip ./windows/
+COPY --from=build-windows-amd64   ${BEECTL_BUILD_DIR}/*.exe ./windows/

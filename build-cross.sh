@@ -18,10 +18,21 @@ while getopts "b:h" opt; do
     b) build_type="$OPTARG" ;;
     h)
         echo "Usage: $0 [-b build_type] [-h]"
+        echo "Options:"
+        echo "  -b build_type  Specify the build type: Debug or Release (default: ${build_type})"
+        echo "  -h             Show this help message"
         exit
         ;;
   esac
 done
+
+if [ -d "$artifacts_dir" ]; then
+    if ! read_yes "Artifacts directory already exists. Do you want to remove it? [Y/n] " 'Y'; then
+        die "Artifacts directory already exists: ${artifacts_dir}"
+    fi
+    info "Removing existing artifacts directory: ${artifacts_dir}"
+    rm -rf "$artifacts_dir"
+fi
 
 info 'Building Linux and Windows binaries'
 DOCKER_BUILDKIT=1 docker build \
@@ -41,9 +52,12 @@ case "$(get_os)" in
         ./build-macos.sh -b "$build_type" -d "$build_dir" || {
             die 'Failed to build macOS artifacts.'
         }
-        cp "${build_dir}"/*.pkg "${artifacts_dir}/"
+
+        macos_artifacts_dir="${artifacts_dir}/macos"
+        mkdir -p "$macos_artifacts_dir"
+        cp "${build_dir}"/*.pkg "${macos_artifacts_dir}/"
         info 'Building macOS complete.'
-        info "macOS artifacts are available in: ${artifacts_dir}"
+        info "macOS artifacts are available in: ${macos_artifacts_dir}"
         ;;
 esac
 

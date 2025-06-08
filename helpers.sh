@@ -45,4 +45,25 @@ get_project_dir() {
     printf '%s\n' "$(cd "$(dirname "$script")" && pwd)"
 }
 
+# $1 prompt
+# $2 default
+read_yes() {
+    prompt="$1"
+    default="$2"
+    answer=
+    while true; do
+        printf '%s' "$prompt"
+        read -r answer
+
+        test -n "$default" && test -z "$answer" && answer="$default"
+
+        test "$answer" = 'Y' && answer='y'
+        test "$answer" = 'N' && answer='n'
+
+        [ "$answer" = 'y' -o "$answer" = 'n' ] && break
+    done
+
+    test "$answer" = 'y'
+}
+
 # vim: ft=bash
