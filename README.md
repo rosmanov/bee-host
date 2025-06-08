@@ -63,6 +63,8 @@ dpkg -i beectl-<VERSION>.<ARCH>.Release.deb
 
 ### Windows
 
+#### Step 1: Download the Installer
+
 For the `x86_64` (`amd64`) and `i686` (32-bit) architectures, download the latest `.exe` file from the release links above. The installer will automatically register the host with the browser.
 
 For `arm64`, there is no native Windows build available. However, you can use the `i686` version on Windows 10 or the `amd64` version on Windows 11, which will run in emulation mode.
@@ -71,6 +73,25 @@ For `arm64`, there is no native Windows build available. However, you can use th
 > It is possible to build the application for `arm64` natively, but, at the time of writing, there is no official support for this architecture in the Windows build scripts.
 > Cross-compilation for `arm64` is not yet implemented because the MinGW toolchain does not support it. Building for `arm64` natively on Windows is possible but requires a Windows ARM64 machine
 > with build tools installed, which is not available in the maintainer's CI/CD environment.
+
+#### Step 2: Install the Host App
+
+Run the downloaded installer. It will automatically register the host with the browser.
+
+In the "Install Options" dialog, choose either of the following options:
+
+- "Add beectl to the system PATH for all users" (recommended)"
+- "Add beectl to the system PATH for the current user"
+
+Click "Next" and accept the default destination folder.
+
+Next, accept the default start menu folder "BeeCtl" unless you want to change it. Click "Next".
+
+Please leave both components checked:
+- "application"
+- "config"
+
+Click "Next" and then "Install".
 
 ---
 
