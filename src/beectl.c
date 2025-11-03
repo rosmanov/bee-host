@@ -69,6 +69,7 @@ uv_timer_t watch_start_timer;
 bool debounce_timer_started = false;
 char *tmp_file_path = NULL;
 str_t tmp_file_dir = { 0 };
+static uv_timespec_t last_mtime = {0};
 
 static void
 print_help ()
@@ -419,19 +420,67 @@ on_editor_process_exit (uv_process_t *req,
 }
 
 static void
+poll_tmp_file (uv_timer_t *handle)
+{
+  uv_fs_t stat_req;
+  uv_timespec_t mtime;
+  int rc = -1;
+
+  rc = uv_fs_stat (loop, &stat_req, tmp_file_path, NULL);
+  if (rc < 0)
+    {
+      elog_error ("uv_fs_stat failed: %s\n", uv_strerror (rc));
+      uv_fs_req_cleanup (&stat_req);
+      return;
+    }
+
+  mtime = stat_req.statbuf.st_mtim;
+  uv_fs_req_cleanup (&stat_req);
+
+  if (mtime.tv_sec != last_mtime.tv_sec || mtime.tv_nsec != last_mtime.tv_nsec)
+    {
+      last_mtime = mtime;
+      elog_debug ("Polling detected file change: %s\n", tmp_file_path);
+      send_file_response (tmp_file_path);
+    }
+}
+
+static void
 start_file_watch_cb (uv_timer_t *timer)
 {
-  int res;
+  int res = -1;
 
   /* Watch the directory of the temp file because many editors such as
    *vim and code don't modify the inode of the file; instead, they write the
    updated content to a temporary file, delete the original, rename the new
    file to the original name (inode is destroyed and not being watched). */
+
+   /* uv_fs_event_start() is unreliable/broken on macOS when watching temporary
+   directories/files (e.g., /tmp, /private/tmp etc.), or under sandboxed
+   contexts. So we use polling there.
+
+   If we ever move the temp file to a more stable location like
+   ~/Library/Application\ Support/..., we can switch back to uv_fs_event_start(). */
+#ifndef __APPLE__
   res = uv_fs_event_start (&fs_event, on_file_change, tmp_file_dir.name, 0);
-  if (unlikely (res < 0))
+
+  if (res < 0)
     {
-      elog_error ("Failed to start fs_event: %s\n", uv_strerror (res));
+      elog_error ("Failed to start fs_event: %s; "
+                  "falling back to polling\n",
+                  uv_strerror (res));
+      uv_timer_start (&debounce_timer,
+                      poll_tmp_file,
+                      FILE_CHANGE_DEBOUNCE_DELAY_MS,
+                      FILE_CHANGE_DEBOUNCE_DELAY_MS);
     }
+#else
+  elog_debug ("Using polling for file changes on macOS\n");
+  uv_timer_start (&debounce_timer,
+                  poll_tmp_file,
+                  FILE_CHANGE_DEBOUNCE_DELAY_MS,
+                  FILE_CHANGE_DEBOUNCE_DELAY_MS);
+#endif
 
   elog_debug ("Started watching file: %s\n", tmp_file_path);
   uv_timer_stop (timer);
