@@ -29,10 +29,6 @@
 
 #include "str.h"
 
-#ifdef WINDOWS
-# include <windows.h>
-#endif
-
 #ifndef HAVE_STRNDUP
 char *
 strndup (const char *s, size_t n)

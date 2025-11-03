@@ -31,10 +31,6 @@
 #include <sys/types.h> /* size_t */
 #include <stdlib.h> /* free */
 
-#ifdef WINDOWS
-# include <windows.h> /* LocalFree */
-#endif
-
 #ifndef HAVE_STRNDUP
 char *strndup (const char *s, size_t n);
 #endif

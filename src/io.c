@@ -40,9 +40,6 @@
 # include <wchar.h>
 # include <io.h> /* _access, read, _mktemp_s, _open */
 # include <process.h> /* _execl */
-# include <windows.h>
-#else
-# include <unistd.h>
 #endif
 
 #include "cjson/cJSON.h"

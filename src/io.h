@@ -24,23 +24,24 @@
  */
 #ifndef __BEECTL_IO_H__
 # define __BEECTL_IO_H__
+#include "common.h"
+
 #include <stdint.h> /* uint32_t UINT32_MAX */
 #include <sys/types.h> /* size_t */
 #include <stdio.h> /* FILE */
 #include <stdbool.h>
 #include <stdarg.h>
 #include <time.h>
-#include "common.h"
-#include "str.h"
 
 #ifdef _WIN32
-#  include <windows.h>
+#  include <process.h>  /* for getpid() */
 #  define ELOG_PATH_SEP '\\'
 #else
-#  include <unistd.h>
 #  include <limits.h>
 #  define ELOG_PATH_SEP '/'
 #endif
+
+#include "str.h"
 
 /* Environment variable to override log file path */
 #define ELOG_ENV "BEECTL_DEBUG_LOG"

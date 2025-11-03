@@ -44,9 +44,6 @@
 #include <assert.h> /* static_assert, assert */
 #include <sys/stat.h>
 #include <fcntl.h> /* O_BINARY */
-#ifndef WINDOWS
-# include <unistd.h>
-#endif
 
 #include <uv.h>
 #include "cjson/cJSON.h"

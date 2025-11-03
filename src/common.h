@@ -92,4 +92,11 @@
 #endif /* WINDOWS */
 #define DIR_SEPARATOR_LEN sizeof (char)
 
+#ifdef WINDOWS
+# include <winsock2.h>
+# include <windows.h>
+#else
+# include <unistd.h>
+#endif
+
 #endif /* __BEECTL_COMMON_H__ */
