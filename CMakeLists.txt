@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.12.0...4.0.1)
 option(CPACK_GENERATOR "CPack generator" "RPM DEB TGZ ZIP productbuild")
 
 project(BeeCtl
-  VERSION 1.4.0
+  VERSION 1.4.1
   DESCRIPTION "Native Messaging Host for the Bee Browser Extension <https://github.com/rosmanov/chrome-bee>"
   HOMEPAGE_URL "https://github.com/rosmanov/bee-host"
   LANGUAGES C)
