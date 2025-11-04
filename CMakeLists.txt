@@ -236,9 +236,12 @@ set(BEECTL_MANIFEST_TARGET_PATH "${CMAKE_INSTALL_PREFIX}/bin/beectl")
 set(BEECTL_CHROME_MANIFEST_DIR "etc/opt/chrome/native-messaging-hosts")
 set(BEECTL_CHROMIUM_MANIFEST_DIR "etc/chromium/native-messaging-hosts")
 
-if(uppercase_CMAKE_SYSTEM_NAME MATCHES LINUX AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(amd|x86_)64$")
-    # Fedora 36 amd64 may have a separate /usr/lib64 dir different from /usr/lib.
-    set(BEECTL_FIREFOX_MANIFEST_DIR "usr/lib64/mozilla/native-messaging-hosts")
+if(UNIX AND NOT APPLE)
+    include(GNUInstallDirs)
+
+    set(BEECTL_FIREFOX_MANIFEST_DIR "usr/lib/mozilla/native-messaging-hosts")
+    # Fedora uses /usr/lib64 while Pop OS uses /usr/lib for amd64. So we install both.
+    set(BEECTL_FIREFOX_MANIFEST_DIR_ALT "usr/lib64/mozilla/native-messaging-hosts")
 else()
     set(BEECTL_FIREFOX_MANIFEST_DIR "usr/lib/mozilla/native-messaging-hosts")
 endif()
@@ -442,5 +445,13 @@ else(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
         COMPONENT config)
 endif(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
 
+# Install manifest to an alternative location to address the issue of different conventions
+# on the /usr/lib and /usr/lib64 directories across Linux distros (Fedora uses /usr/lib64,
+# Pop OS uses /usr/lib, Arch uses /usr/lib etc.)
+if(BEECTL_FIREFOX_MANIFEST_DIR_ALT)
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${BEECTL_FIREFOX_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
+        DESTINATION "${BEECTL_FIREFOX_MANIFEST_DIR_ALT}"
+        COMPONENT config)
+endif()
 
 include(CPack)
