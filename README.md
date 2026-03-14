@@ -61,6 +61,65 @@ Install the package:
 dpkg -i beectl-<VERSION>.<ARCH>.Release.deb
 ```
 
+### NixOS / Nix Package Manager
+
+BeeCtl is available as a Nix flake for reproducible builds on NixOS and systems with Nix package manager.
+
+#### Installation
+
+```bash
+nix profile install github:rosmanov/bee-host
+```
+
+#### Browser Manifest Setup (One-Time)
+
+After installation, create symbolic links for browser manifests. **This is required because:**
+- Browsers expect manifests in specific standard locations (`~/.mozilla/native-messaging-hosts/`, etc.)
+- Nix installs packages to isolated read-only paths in `/nix/store/`
+- The symlinks bridge these two locations
+
+**For Firefox:**
+```bash
+mkdir -p ~/.mozilla/native-messaging-hosts
+ln -sf ~/.nix-profile/usr/lib/mozilla/native-messaging-hosts/com.ruslan_osmanov.bee.json \
+       ~/.mozilla/native-messaging-hosts/com.ruslan_osmanov.bee.json
+```
+
+**For Chrome:**
+```bash
+mkdir -p ~/.config/google-chrome/NativeMessagingHosts
+ln -sf ~/.nix-profile/etc/opt/chrome/native-messaging-hosts/com.ruslan_osmanov.bee.json \
+       ~/.config/google-chrome/NativeMessagingHosts/com.ruslan_osmanov.bee.json
+```
+
+**For Chromium:**
+```bash
+mkdir -p ~/.config/chromium/NativeMessagingHosts
+ln -sf ~/.nix-profile/etc/chromium/native-messaging-hosts/com.ruslan_osmanov.bee.json \
+       ~/.config/chromium/NativeMessagingHosts/com.ruslan_osmanov.bee.json
+```
+
+> [!NOTE]
+> You only need to create these symlinks once. They point to `~/.nix-profile/` which Nix automatically updates when you upgrade, so the manifests will always reference the current version.
+
+#### Upgrading
+
+```bash
+nix profile upgrade '.*beectl.*'
+```
+
+The manifests will automatically point to the new version - no need to recreate the symlinks.
+
+#### Alternative: Use Precompiled TGZ
+
+If you prefer to avoid manual manifest setup, download the TGZ package and extract to your home directory:
+
+```bash
+tar xzf beectl-<VERSION>-<RELEASE>.<ARCH>.Release.TGZ -C ~/.local --strip-components=1
+```
+
+Then create symlinks as shown above, replacing `~/.nix-profile/` with `~/.local/`.
+
 ### Windows
 
 #### Step 1: Download the Installer

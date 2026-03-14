@@ -11,6 +11,13 @@ set(PACKAGE_RELEASE 1) # Increment this only when the package is changed, not th
 set(PROJECT_CONTACT "Ruslan Osmanov <608192+rosmanov@users.noreply.github.com>")
 set(PROJECT_LICENSE "MIT")
 
+# Generate Nix flake from template
+configure_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/flake.nix.in"
+  "${CMAKE_CURRENT_SOURCE_DIR}/flake.nix"
+  @ONLY
+)
+
 string(TOUPPER "${CMAKE_SYSTEM_NAME}" uppercase_CMAKE_SYSTEM_NAME)
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Force static library build")
