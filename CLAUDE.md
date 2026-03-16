@@ -90,8 +90,10 @@ bee-host/
 
 ### Build System Details
 
-1. **External Dependencies:** Both libuv and cJSON are fetched automatically via CMake's `ExternalProject_Add()` and built as static libraries
-2. **Static Linking:** The application is statically linked to avoid runtime dependencies
+1. **External Dependencies:**
+   - **Default mode:** Both libuv and cJSON are fetched automatically via CMake's `ExternalProject_Add()` and built as static libraries
+   - **System deps mode:** Set `-DUSE_SYSTEM_DEPS=ON` to use system-provided libuv and cJSON (for Nix, distro packages, etc.)
+2. **Static Linking:** The application is statically linked to avoid runtime dependencies (enforced in both modes)
 3. **Optimization Flags:** Release builds use `-Os -ffunction-sections -fdata-sections` for size optimization
 4. **Binary Stripping:** macOS builds automatically strip local symbols to reduce size
 
@@ -182,6 +184,14 @@ SET_BINARY_MODE(fd) // Handle binary mode for Windows
 - **`build-cross.sh`** - Docker-based cross-compilation script
 - **`helpers.sh`** - Common shell functions used by build scripts
 
+**CMake Options:**
+
+- **`USE_SYSTEM_DEPS`** (default: OFF) - Use system-provided libuv and cJSON instead of downloading from GitHub
+  - When OFF: CMake downloads and builds dependencies using `ExternalProject_Add()` (requires network access)
+  - When ON: CMake uses pkg-config to find system libraries (sandbox-compatible, used by Nix)
+  - Static linking is enforced in both modes when static libraries are available
+  - Example: `cmake -DUSE_SYSTEM_DEPS=ON ..`
+
 ### Packaging
 
 - **`beectl.spec`** - RPM spec file template
@@ -237,6 +247,8 @@ The project includes a Nix flake for NixOS users and reproducible builds:
 - **Generated file:** `flake.nix` is automatically created by CMake's `configure_file()` command
 - **Version source:** CMakeLists.txt is the single source of truth - flake.nix is regenerated on every CMake run
 - **Git tracking:** The generated `flake.nix` is committed to git so users can build without running CMake first
+- **Sandbox compatible:** Uses `-DUSE_SYSTEM_DEPS=ON` to avoid network access during build (Nix fetches deps before sandbox)
+- **Static linking:** Overrides nixpkgs libuv and cJSON to build with static libraries enabled
 
 **Workflow:**
 1. Bump version in `CMakeLists.txt`
@@ -247,6 +259,11 @@ The project includes a Nix flake for NixOS users and reproducible builds:
 ```bash
 nix build
 nix run . -- --help
+```
+
+**Testing with sandbox:**
+```bash
+./test-flake.sh  # Includes sandbox tests
 ```
 
 **Note:** Nix installs to isolated paths, so users must manually create symlinks for browser manifests (documented in README.md).

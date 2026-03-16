@@ -10,6 +10,23 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
+
+        # Build libuv with static library enabled
+        libuv-static = pkgs.libuv.overrideAttrs (oldAttrs: {
+          dontDisableStatic = true;
+          cmakeFlags = (oldAttrs.cmakeFlags or []) ++ [
+            "-DBUILD_SHARED_LIBS=OFF"
+          ];
+        });
+
+        # Build cJSON with static library enabled
+        cjson-static = pkgs.cjson.overrideAttrs (oldAttrs: {
+          dontDisableStatic = true;
+          cmakeFlags = (oldAttrs.cmakeFlags or []) ++ [
+            "-DBUILD_SHARED_AND_STATIC_LIBS=ON"
+            "-DBUILD_SHARED_LIBS=OFF"
+          ];
+        });
       in
       {
         packages.default = pkgs.stdenv.mkDerivation {
@@ -18,22 +35,26 @@
 
           src = ./.;
 
-          nativeBuildInputs = with pkgs; [ cmake git cacert ];
+          nativeBuildInputs = with pkgs; [
+            cmake
+            pkg-config
+          ];
 
-          buildInputs = with pkgs; [ ];
-
-          # Set SSL certificates for git to clone dependencies
-          NIX_SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+          buildInputs = [
+            libuv-static
+            cjson-static
+          ];
 
           cmakeFlags = [
             "-DCMAKE_BUILD_TYPE=Release"
+            "-DUSE_SYSTEM_DEPS=ON"
           ];
 
           meta = with pkgs.lib; {
             description = "@PROJECT_DESCRIPTION@";
             homepage = "@PROJECT_HOMEPAGE_URL@";
             license = licenses.mit;
-            platforms = platforms.linux;
+            platforms = platforms.linux ++ platforms.darwin;
             maintainers = [ ];
           };
         };

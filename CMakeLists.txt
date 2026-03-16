@@ -27,6 +27,9 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 
+# Option to use system-provided dependencies (for Nix, distro packages, etc.)
+option(USE_SYSTEM_DEPS "Use system-provided libuv and cJSON instead of downloading" OFF)
+
 include(CheckCSourceCompiles)
 include(CheckFunctionExists)
 include(ExternalProject)
@@ -50,93 +53,173 @@ endif()
 
 set(EXTERNAL_DIR ${CMAKE_CURRENT_BINARY_DIR}/external)
 
-set(cjson_cmake_args
-    -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
-    -DBUILD_SHARED_AND_STATIC_LIBS=On
-    -DBUILD_SHARED_LIBS=Off
-    -DENABLE_CJSON_TEST=Off
-    -DENABLE_CJSON_UTILS=On
-    -DENABLE_TARGET_EXPORT=On
-    -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+# ============================================================================
+# Dependency Setup Functions
+# ============================================================================
+
+# Function: setup_system_dependencies
+# Finds and configures system-provided libuv and cJSON (USE_SYSTEM_DEPS=ON)
+# Prefers static libraries, falls back to dynamic if unavailable
+# Sets: BEECTL_LIBUV_LIBRARIES, BEECTL_CJSON_LIBRARIES,
+#       BEECTL_LIBUV_INCLUDE_DIRS, BEECTL_CJSON_INCLUDE_DIRS,
+#       BEECTL_EXTERNAL_TARGETS (empty)
+function(setup_system_dependencies)
+  message(STATUS "Using system-provided libuv and cJSON")
+
+  find_package(PkgConfig REQUIRED)
+
+  # Find libuv and cJSON via pkg-config
+  pkg_check_modules(LIBUV REQUIRED libuv>=1.51.0)
+  pkg_check_modules(CJSON REQUIRED libcjson>=1.7.18)
+
+  # Prefer static libraries if available
+  find_library(LIBUV_STATIC_LIB
+    NAMES libuv.a libuv_a uv.lib
+    HINTS ${LIBUV_LIBRARY_DIRS}
+    NO_DEFAULT_PATH
+  )
+  find_library(CJSON_STATIC_LIB
+    NAMES libcjson.a libcjson_a cjson.lib
+    HINTS ${CJSON_LIBRARY_DIRS}
+    NO_DEFAULT_PATH
+  )
+
+  # Set library variables (static if found, otherwise dynamic)
+  if(LIBUV_STATIC_LIB)
+    message(STATUS "Using static libuv: ${LIBUV_STATIC_LIB}")
+    set(BEECTL_LIBUV_LIBRARIES "${LIBUV_STATIC_LIB}" PARENT_SCOPE)
+  else()
+    message(STATUS "Using dynamic libuv: ${LIBUV_LIBRARIES}")
+    set(BEECTL_LIBUV_LIBRARIES "${LIBUV_LIBRARIES}" PARENT_SCOPE)
+  endif()
+
+  if(CJSON_STATIC_LIB)
+    message(STATUS "Using static cJSON: ${CJSON_STATIC_LIB}")
+    set(BEECTL_CJSON_LIBRARIES "${CJSON_STATIC_LIB}" PARENT_SCOPE)
+  else()
+    message(STATUS "Using dynamic cJSON: ${CJSON_LIBRARIES}")
+    set(BEECTL_CJSON_LIBRARIES "${CJSON_LIBRARIES}" PARENT_SCOPE)
+  endif()
+
+  # Set include directories
+  set(BEECTL_LIBUV_INCLUDE_DIRS "${LIBUV_INCLUDE_DIRS}" PARENT_SCOPE)
+  set(BEECTL_CJSON_INCLUDE_DIRS "${CJSON_INCLUDE_DIRS}" PARENT_SCOPE)
+
+  # No external project targets
+  set(BEECTL_EXTERNAL_TARGETS "" PARENT_SCOPE)
+endfunction()
+
+# Function: setup_external_dependencies
+# Downloads and builds libuv and cJSON from GitHub (USE_SYSTEM_DEPS=OFF)
+# Builds as static libraries using ExternalProject_Add
+# Sets: BEECTL_LIBUV_LIBRARIES, BEECTL_CJSON_LIBRARIES,
+#       BEECTL_LIBUV_INCLUDE_DIRS, BEECTL_CJSON_INCLUDE_DIRS,
+#       BEECTL_EXTERNAL_TARGETS (list of targets)
+function(setup_external_dependencies)
+  message(STATUS "Downloading and building libuv and cJSON from source")
+
+  # Configure cJSON build
+  set(cjson_cmake_args
+      -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
+      -DBUILD_SHARED_AND_STATIC_LIBS=On
+      -DBUILD_SHARED_LIBS=Off
+      -DENABLE_CJSON_TEST=Off
+      -DENABLE_CJSON_UTILS=On
+      -DENABLE_TARGET_EXPORT=On
+      -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+      -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+      -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+      -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
+      -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
+      -DCMAKE_EXE_LINKER_FLAGS=${CMAKE_EXE_LINKER_FLAGS}
+      -DCMAKE_SHARED_LINKER_FLAGS=${CMAKE_SHARED_LINKER_FLAGS}
+      -DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}
+      -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}
+  )
+  if(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
+      list(APPEND cjson_cmake_args -DWIN32=ON)
+  endif()
+
+  ExternalProject_Add(cjson
+    GIT_REPOSITORY "https://github.com/DaveGamble/cJSON"
+    GIT_TAG "v1.7.18"
+    PREFIX "${EXTERNAL_DIR}/cJSON"
+    BUILD_IN_SOURCE 1
+    TEST_COMMAND ""
+    INSTALL_COMMAND ""
+    CMAKE_ARGS ${cjson_cmake_args}
+  )
+  ExternalProject_Get_Property(cjson source_dir)
+  ExternalProject_Get_Property(cjson binary_dir)
+  ExternalProject_Get_Property(cjson download_dir)
+  set(CJSON_SOURCE_DIR "${source_dir}")
+  set(CJSON_BINARY_DIR "${binary_dir}")
+  set(CJSON_DOWNLOAD_DIR "${download_dir}")
+  if (CMAKE_C_COMPILER_ID STREQUAL "MSVC")
+      set(CJSON_STATIC_NAME "cjson.lib")
+  else()
+      set(CJSON_STATIC_NAME "libcjson.a")
+  endif()
+  set(CJSON_STATIC_LIB "${CJSON_BINARY_DIR}/${CJSON_STATIC_NAME}")
+
+  # Configure libuv build
+  set(LIBUV_TAG v1.51.0)
+  set(libuv_cmake_args
+    -DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}
+    -DCMAKE_SYSTEM_PROCESSOR=${CMAKE_SYSTEM_PROCESSOR}
     -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
     -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
+    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
     -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
     -DCMAKE_EXE_LINKER_FLAGS=${CMAKE_EXE_LINKER_FLAGS}
-    -DCMAKE_SHARED_LINKER_FLAGS=${CMAKE_SHARED_LINKER_FLAGS}
-    -DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}
+    -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+    -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+    -DLIBUV_BUILD_TESTS=OFF
+    -DLIBUV_BUILD_EXAMPLES=OFF
+    -DLIBUV_INSTALL=OFF
+    -DCMAKE_POSITION_INDEPENDENT_CODE=ON
     -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}
-)
-if(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
-    list(APPEND cjson_cmake_args -DWIN32=ON)
-endif()
+  )
+  if(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
+    list(APPEND libuv_cmake_args -DWIN32=ON)
+  endif()
 
-ExternalProject_Add(cjson
-  GIT_REPOSITORY "https://github.com/DaveGamble/cJSON"
-  GIT_TAG "v1.7.18"
-  PREFIX "${EXTERNAL_DIR}/cJSON"
-  BUILD_IN_SOURCE 1
-  TEST_COMMAND ""
-  INSTALL_COMMAND ""
-  CMAKE_ARGS ${cjson_cmake_args}
-)
-ExternalProject_Get_Property(cjson source_dir)
-ExternalProject_Get_Property(cjson binary_dir)
-ExternalProject_Get_Property(cjson download_dir)
-set(CJSON_SOURCE_DIR "${source_dir}")
-set(CJSON_BINARY_DIR "${binary_dir}")
-set(CJSON_DOWNLOAD_DIR "${download_dir}")
-if (CMAKE_C_COMPILER_ID STREQUAL "MSVC")
-    set(CJSON_STATIC_NAME "cjson.lib")
+  ExternalProject_Add(libuv_ep
+    GIT_REPOSITORY "https://github.com/libuv/libuv.git"
+    GIT_TAG "${LIBUV_TAG}"
+    PREFIX "${EXTERNAL_DIR}/libuv"
+    CMAKE_ARGS ${libuv_cmake_args}
+    INSTALL_COMMAND ""
+    TEST_COMMAND ""
+  )
+  ExternalProject_Get_Property(libuv_ep source_dir)
+  ExternalProject_Get_Property(libuv_ep binary_dir)
+  set(LIBUV_SOURCE_DIR "${source_dir}")
+  set(LIBUV_BINARY_DIR "${binary_dir}")
+  if (CMAKE_C_COMPILER_ID STREQUAL "MSVC")
+      set(LIBUV_STATIC_NAME "uv.lib")
+  else()
+      set(LIBUV_STATIC_NAME "libuv.a")
+  endif()
+  set(LIBUV_STATIC_LIB "${LIBUV_BINARY_DIR}/${LIBUV_STATIC_NAME}")
+
+  # Set standardized output variables for parent scope
+  set(BEECTL_LIBUV_LIBRARIES "${LIBUV_STATIC_LIB}" PARENT_SCOPE)
+  set(BEECTL_CJSON_LIBRARIES "${CJSON_STATIC_LIB}" PARENT_SCOPE)
+  set(BEECTL_LIBUV_INCLUDE_DIRS "${LIBUV_SOURCE_DIR}/include" PARENT_SCOPE)
+  set(BEECTL_CJSON_INCLUDE_DIRS "${CJSON_DOWNLOAD_DIR}" PARENT_SCOPE)
+  set(BEECTL_EXTERNAL_TARGETS "cjson;libuv_ep" PARENT_SCOPE)
+endfunction()
+
+# ============================================================================
+# Main Dependency Setup
+# ============================================================================
+
+if(USE_SYSTEM_DEPS)
+  setup_system_dependencies()
 else()
-    set(CJSON_STATIC_NAME "libcjson.a")
+  setup_external_dependencies()
 endif()
-# Full path to the expected built static lib
-set(CJSON_STATIC_LIB "${CJSON_BINARY_DIR}/${CJSON_STATIC_NAME}")
-
-set(LIBUV_TAG v1.51.0)
-set(EXTERNAL_DIR ${CMAKE_CURRENT_BINARY_DIR}/external)
-
-set(libuv_cmake_args
-  -DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}
-  -DCMAKE_SYSTEM_PROCESSOR=${CMAKE_SYSTEM_PROCESSOR}
-  -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-  -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
-  -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-  -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
-  -DCMAKE_EXE_LINKER_FLAGS=${CMAKE_EXE_LINKER_FLAGS}
-  -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
-  -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-  -DLIBUV_BUILD_TESTS=OFF
-  -DLIBUV_BUILD_EXAMPLES=OFF
-  -DLIBUV_INSTALL=OFF
-  -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-  -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}
-)
-# Append UV_DISABLE_CLOCK_GETTIME only for Windows
-if(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
-  list(APPEND libuv_cmake_args -DWIN32=ON)
-endif()
-
-ExternalProject_Add(libuv_ep
-  GIT_REPOSITORY "https://github.com/libuv/libuv.git"
-  GIT_TAG "${LIBUV_TAG}"
-  PREFIX "${EXTERNAL_DIR}/libuv"
-  CMAKE_ARGS ${libuv_cmake_args}
-  INSTALL_COMMAND ""
-  TEST_COMMAND ""
-)
-ExternalProject_Get_Property(libuv_ep source_dir)
-ExternalProject_Get_Property(libuv_ep binary_dir)
-set(LIBUV_SOURCE_DIR "${source_dir}")
-set(LIBUV_BINARY_DIR "${binary_dir}")
-if (CMAKE_C_COMPILER_ID STREQUAL "MSVC")
-    set(LIBUV_STATIC_NAME "uv.lib")
-else()
-    set(LIBUV_STATIC_NAME "libuv.a")
-endif()
-# Full path to the expected built static lib
-set(LIBUV_STATIC_LIB "${LIBUV_BINARY_DIR}/${LIBUV_STATIC_NAME}")
 
 # beectl
 set(BEECTL_SRCS
@@ -168,8 +251,12 @@ target_compile_features(beectl PRIVATE c_variadic_macros)
 target_compile_options(beectl PRIVATE
   "$<$<CONFIG:Release>:-Os;-ffunction-sections;-fdata-sections;-DNDEBUG>"
 )
-target_include_directories(beectl PRIVATE "${CJSON_DOWNLOAD_DIR}")
-target_include_directories(beectl PRIVATE "${libuv_SOURCE_DIR}/include")
+
+# Include directories (using standardized variables from setup functions)
+target_include_directories(beectl PRIVATE
+  ${BEECTL_CJSON_INCLUDE_DIRS}
+  ${BEECTL_LIBUV_INCLUDE_DIRS}
+)
 
 target_compile_definitions(beectl PRIVATE
   PROJECT_VERSION="${PROJECT_VERSION}-${PACKAGE_RELEASE}"
@@ -178,26 +265,29 @@ target_compile_definitions(beectl PRIVATE
   PROJECT_LICENSE="${PROJECT_LICENSE}"
 )
 
-target_link_libraries(beectl PRIVATE "${LIBUV_STATIC_LIB}" "${CJSON_STATIC_LIB}")
-#target_link_libraries(beectl PRIVATE "${LIBUV_STATIC_LIB}")
+# Link libraries (using standardized variables from setup functions)
+target_link_libraries(beectl PRIVATE
+  ${BEECTL_LIBUV_LIBRARIES}
+  ${BEECTL_CJSON_LIBRARIES}
+)
+
+# Platform-specific system libraries
 if(WIN32)
-    # For libuv on Windows/MinGW
-    target_link_libraries(beectl PRIVATE ws2_32 iphlpapi dbghelp userenv ssp)
+  # For libuv on Windows/MinGW
+  target_link_libraries(beectl PRIVATE ws2_32 iphlpapi dbghelp userenv ssp)
 endif()
-target_include_directories(beectl PRIVATE "${LIBUV_SOURCE_DIR}/include")
 
 if(UNIX AND NOT APPLE)
-  # Since we are bypassing libuv's CMake step by using ExternalProject_Add() instead of
-  # FetchContent_Declare(), we must link pthread and dl manually as libuv requires them.
-  # Note that we don't use FetchContent because it automatically installs extra files that
-  # eventually appear in the CPack-generated packages. By using ExternalProject, we avoid
-  # the install step.
+  # libuv requires pthread and dl on Linux
   target_link_libraries(beectl PRIVATE pthread dl)
 endif()
 
 set_property(TARGET beectl PROPERTY C_STANDARD 11) # C11
-add_dependencies(beectl cjson)
-add_dependencies(beectl libuv_ep)
+
+# Add external project dependencies if any (empty for system deps)
+if(BEECTL_EXTERNAL_TARGETS)
+  add_dependencies(beectl ${BEECTL_EXTERNAL_TARGETS})
+endif()
 
 # The following would be better approach than including cJSON files in our
 # source list. But the build fails when cross-compiling, since
