@@ -5,12 +5,14 @@
 BeeCtl is a native messaging host application for the [Browser's External Editor (Bee) extension](https://github.com/rosmanov/chrome-bee). It enables communication between web browsers (Chrome, Firefox, Chromium) and external text editors, allowing users to edit text areas in their preferred editor.
 
 **Key Functionality:**
+
 - Receives text content from browser extensions via native messaging protocol
 - Launches external text editors with the content
 - Monitors file changes using libuv's file system events
 - Sends updated content back to the browser
 
 **Supported Platforms:**
+
 - Linux (amd64, i386, arm, aarch64, ppc64le)
 - Windows (amd64, i686) - cross-compiled using MinGW
 - macOS (x86_64, arm64)
@@ -21,6 +23,7 @@ BeeCtl is a native messaging host application for the [Browser's External Editor
 ## Architecture
 
 ### Core Technologies
+
 - **Language:** C11
 - **Build System:** CMake 3.12+
 - **Event Loop:** libuv v1.51.0 (for file watching and async I/O)
@@ -57,6 +60,7 @@ bee-host/
 ## Building
 
 ### Prerequisites
+
 - CMake 3.12 or higher
 - GCC (Linux) or Clang (macOS) or MinGW-GCC (Windows cross-compilation)
 - Git (for fetching dependencies)
@@ -64,26 +68,31 @@ bee-host/
 ### Quick Build Commands
 
 **Linux (amd64) - Release:**
+
 ```bash
 ./build-linux-amd64.sh -b Release
 ```
 
 **macOS (native architecture):**
+
 ```bash
 ./build-macos.sh -b Release
 ```
 
 **Debug Build:**
+
 ```bash
 ./build.sh -b Debug
 ```
 
 **Cross-compile for all platforms (requires Docker):**
+
 ```bash
 ./build-cross.sh -b Release
 ```
 
 **Custom toolchain:**
+
 ```bash
 ./build.sh /path/to/Toolchain-Custom.cmake -b Release
 ```
@@ -143,6 +152,7 @@ CPack will generate packages appropriate for the platform (RPM, DEB, NSIS instal
 ### Code Patterns
 
 **Platform-specific code example:**
+
 ```c
 #ifdef WINDOWS
   // Windows-specific code
@@ -154,6 +164,7 @@ CPack will generate packages appropriate for the platform (RPM, DEB, NSIS instal
 ```
 
 **Using common.h macros:**
+
 ```c
 DIR_SEPARATOR      // '/' on Unix, '\\' on Windows
 PATH_DELIMITER     // ':' on Unix, ';' on Windows
@@ -251,19 +262,16 @@ The project includes a Nix flake for NixOS users and reproducible builds:
 - **Static linking:** Overrides nixpkgs libuv and cJSON to build with static libraries enabled
 
 **Workflow:**
+
 1. Bump version in `CMakeLists.txt`
 2. Run `cmake ..` in build directory (regenerates `flake.nix`)
 3. Commit both `CMakeLists.txt` and `flake.nix`
 
 **Testing locally:**
+
 ```bash
 nix build
 nix run . -- --help
-```
-
-**Testing with sandbox:**
-```bash
-./test-flake.sh  # Includes sandbox tests
 ```
 
 **Note:** Nix installs to isolated paths, so users must manually create symlinks for browser manifests (documented in README.md).
@@ -275,6 +283,7 @@ nix run . -- --help
 ### Manual Testing
 
 1. **Install the native messaging host:**
+
    ```bash
    cd build
    make install  # or install the generated package
@@ -287,6 +296,7 @@ nix run . -- --help
 ### Testing File Watching
 
 Use the provided test script:
+
 ```bash
 ./test-message.py
 ```
@@ -300,23 +310,28 @@ This sends a test message to the native host and verifies the response.
 ### Build Failures
 
 **Issue:** `ExternalProject_Add` fails to download dependencies
+
 - **Solution:** Check network connectivity and Git access to GitHub
 
 **Issue:** Cross-compilation fails with "wrong architecture" errors
+
 - **Solution:** Verify the toolchain file has correct `CMAKE_C_COMPILER` and linker settings
 
 **Issue:** Windows build fails with undefined symbols
+
 - **Solution:** Ensure all required Windows libraries are linked (ws2_32, iphlpapi, dbghelp, userenv, ssp)
 
 ### Runtime Issues
 
 **Issue:** Browser can't find the native messaging host
+
 - **Solution:** Check manifest files are installed in correct locations:
   - Linux: `/etc/opt/chrome/native-messaging-hosts/`, `/usr/lib/mozilla/native-messaging-hosts/`
   - macOS: `~/Library/Google/Chrome/NativeMessagingHosts/`, `~/Library/Application Support/Mozilla/NativeMessagingHosts/`
   - Windows: Registry keys under `HKCU\Software\Google\Chrome\NativeMessagingHosts\`
 
 **Issue:** File changes not detected
+
 - **Solution:** This is a known issue (#10), now fixed. Ensure using version 1.4.0+
 
 ---
@@ -340,8 +355,8 @@ This sends a test message to the native host and verifies the response.
 4. Commit version changes: `git add CMakeLists.txt changelog flake.nix`
 5. Build packages for all platforms: `./build-cross.sh -b Release`
 6. Test packages on target systems
-5. Tag release in Git: `git tag -a vX.Y.Z -m "Release X.Y.Z"`
-6. Upload packages to GitHub Releases and SourceForge
+7. Tag release in Git: `git tag -a vX.Y.Z -m "Release X.Y.Z"`
+8. Upload packages to GitHub Releases and SourceForge
 
 ---
 
