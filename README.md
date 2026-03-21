@@ -65,13 +65,32 @@ dpkg -i beectl-<VERSION>.<ARCH>.Release.deb
 
 BeeCtl is available as a Nix flake for reproducible builds on NixOS and systems with Nix package manager.
 
-#### Installation
+#### NixOS Installation (Idiomatic)
 
-```bash
-nix profile install github:rosmanov/bee-host
+On NixOS, you don't need to manually link manifests. Add the package to your configuration and configure your browser.
+
+In your `flake.nix` or `configuration.nix`:
+
+```nix
+{ pkgs, ... }: {
+  # 1. Add the package (assuming you added the flake to your inputs)
+  environment.systemPackages = [ pkgs.beectl ];
+  
+  # 2. Configure Firefox to find the native messaging host
+  programs.firefox.nativeMessagingHosts.packages = [ pkgs.beectl ];
+  
+  # Note: Chromium-based browsers may also require specific configuration
+  # depending on your setup.
+}
 ```
 
-#### Browser Manifest Setup (One-Time)
+#### Nix Package Manager (Non-NixOS)
+
+If you are using the Nix package manager on another Linux distribution, install the package using:
+
+```bash
+nix profile install github:rosmanov/bee-host --extra-experimental-features "nix-command flakes"
+```
 
 After installation, create symbolic links for browser manifests. **This is required because:**
 - Browsers expect manifests in specific standard locations (`~/.mozilla/native-messaging-hosts/`, etc.)
@@ -81,7 +100,7 @@ After installation, create symbolic links for browser manifests. **This is requi
 **For Firefox:**
 ```bash
 mkdir -p ~/.mozilla/native-messaging-hosts
-ln -sf ~/.nix-profile/usr/lib/mozilla/native-messaging-hosts/com.ruslan_osmanov.bee.json \
+ln -sf ~/.nix-profile/lib/mozilla/native-messaging-hosts/com.ruslan_osmanov.bee.json \
        ~/.mozilla/native-messaging-hosts/com.ruslan_osmanov.bee.json
 ```
 
@@ -105,7 +124,7 @@ ln -sf ~/.nix-profile/etc/chromium/native-messaging-hosts/com.ruslan_osmanov.bee
 #### Upgrading
 
 ```bash
-nix profile upgrade '.*beectl.*'
+nix profile upgrade '.*beectl.*' --extra-experimental-features "nix-command flakes"
 ```
 
 The manifests will automatically point to the new version - no need to recreate the symlinks.

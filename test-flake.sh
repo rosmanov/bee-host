@@ -1,6 +1,7 @@
 #!/bin/bash
 # Test script to verify Nix flake works correctly
 set -e
+set -x
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$PROJECT_DIR"

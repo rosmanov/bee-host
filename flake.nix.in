@@ -50,6 +50,26 @@
             "-DUSE_SYSTEM_DEPS=ON"
           ];
 
+          postInstall = ''
+            # Fix hardcoded paths in CMakeLists.txt for NixOS
+            if [ -d "$out/usr/local/bin" ]; then
+              mkdir -p "$out/bin"
+              mv "$out/usr/local/bin/beectl" "$out/bin/"
+              rmdir -p "$out/usr/local/bin" || true
+            fi
+            if [ -d "$out/usr/lib/mozilla" ]; then
+              mkdir -p "$out/lib/mozilla"
+              mv "$out/usr/lib/mozilla/native-messaging-hosts" "$out/lib/mozilla/"
+              rmdir -p "$out/usr/lib/mozilla" || true
+            fi
+            if [ -d "$out/usr/lib64" ]; then
+              rm -rf "$out/usr/lib64"
+            fi
+            if [ -d "$out/usr" ]; then
+              rmdir -p "$out/usr" || true
+            fi
+          '';
+
           meta = with pkgs.lib; {
             description = "@PROJECT_DESCRIPTION@";
             homepage = "@PROJECT_HOMEPAGE_URL@";
@@ -61,7 +81,7 @@
 
         apps.default = {
           type = "app";
-          program = "${self.packages.${system}.default}/usr/local/bin/beectl";
+          program = "${self.packages.${system}.default}/bin/beectl";
         };
       });
 }
