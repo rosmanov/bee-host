@@ -124,7 +124,7 @@ ln -sf ~/.nix-profile/etc/chromium/native-messaging-hosts/com.ruslan_osmanov.bee
 #### Upgrading
 
 ```bash
-nix profile upgrade '.*beectl.*' --extra-experimental-features "nix-command flakes"
+nix profile upgrade '.*bee.*' --refresh --extra-experimental-features "nix-command flakes"
 ```
 
 The manifests will automatically point to the new version - no need to recreate the symlinks.
