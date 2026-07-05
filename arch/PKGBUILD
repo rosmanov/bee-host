@@ -1,7 +1,7 @@
 # Maintainer: Ruslan Osmanov <608192+rosmanov@users.noreply.github.com>
 
 pkgname=beectl
-pkgver=1.4.2
+pkgver=1.5.0
 pkgrel=1
 pkgdesc="Native Messaging Host for the Bee Browser Extension <https://github.com/rosmanov/chrome-bee>"
 arch=('x86_64' 'aarch64' 'i686' 'pentium4' 'armv7h' 'ppc64le')

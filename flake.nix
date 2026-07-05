@@ -31,7 +31,7 @@
       {
         packages.default = pkgs.stdenv.mkDerivation {
           pname = "beectl";
-          version = "1.4.2-1";
+          version = "1.5.0-1";
 
           src = ./.;
 
