@@ -61,6 +61,34 @@ Install the package:
 dpkg -i beectl-<VERSION>.<ARCH>.Release.deb
 ```
 
+### Arch Linux
+
+BeeCtl is available as an Arch Linux package built natively from source using the provided `PKGBUILD`.
+
+Ensure you have the standard Arch Linux package building prerequisites installed:
+
+```bash
+sudo pacman -S --needed base-devel
+```
+
+To build and install the package:
+
+1. Clone this repository:
+   ```bash
+   git clone https://github.com/rosmanov/bee-host.git
+   cd bee-host
+   ```
+2. Navigate to the `arch` directory and build using `makepkg`:
+   ```bash
+   cd arch
+   makepkg -si
+   ```
+
+This will automatically compile the binary using system libraries, install it to `/usr/bin/beectl`, and place the browser manifests in the correct standard system directories for Chrome, Chromium, and Firefox:
+- Firefox manifest: `/usr/lib/mozilla/native-messaging-hosts/com.ruslan_osmanov.bee.json`
+- Chrome manifest: `/etc/opt/chrome/native-messaging-hosts/com.ruslan_osmanov.bee.json`
+- Chromium manifest: `/etc/chromium/native-messaging-hosts/com.ruslan_osmanov.bee.json`
+
 ### NixOS / Nix Package Manager
 
 BeeCtl is available as a Nix flake for reproducible builds on NixOS and systems with Nix package manager.

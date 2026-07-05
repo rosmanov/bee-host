@@ -85,3 +85,9 @@ _CPack_Packages/
 *.dmg
 *.pkg
 /LICENSE.txt
+
+# Arch Linux packaging artifacts
+/arch/src/
+/arch/pkg/
+/arch/build/
+/arch/*.pkg.tar.zst
