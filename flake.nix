@@ -48,27 +48,12 @@
           cmakeFlags = [
             "-DCMAKE_BUILD_TYPE=Release"
             "-DUSE_SYSTEM_DEPS=ON"
+            "-DBEECTL_BIN_DIR=bin"
+            "-DBEECTL_CHROME_MANIFEST_DIR=etc/opt/chrome/native-messaging-hosts"
+            "-DBEECTL_CHROMIUM_MANIFEST_DIR=etc/chromium/native-messaging-hosts"
+            "-DBEECTL_FIREFOX_MANIFEST_DIR=lib/mozilla/native-messaging-hosts"
+            "-DBEECTL_FIREFOX_MANIFEST_DIR_ALT="
           ];
-
-          postInstall = ''
-            # Fix hardcoded paths in CMakeLists.txt for NixOS
-            if [ -d "$out/usr/local/bin" ]; then
-              mkdir -p "$out/bin"
-              mv "$out/usr/local/bin/beectl" "$out/bin/"
-              rmdir -p "$out/usr/local/bin" || true
-            fi
-            if [ -d "$out/usr/lib/mozilla" ]; then
-              mkdir -p "$out/lib/mozilla"
-              mv "$out/usr/lib/mozilla/native-messaging-hosts" "$out/lib/mozilla/"
-              rmdir -p "$out/usr/lib/mozilla" || true
-            fi
-            if [ -d "$out/usr/lib64" ]; then
-              rm -rf "$out/usr/lib64"
-            fi
-            if [ -d "$out/usr" ]; then
-              rmdir -p "$out/usr" || true
-            fi
-          '';
 
           meta = with pkgs.lib; {
             description = "Native Messaging Host for the Bee Browser Extension <https://github.com/rosmanov/chrome-bee>";
