@@ -90,9 +90,12 @@ case "$toolchain" in
         *Linux*)
             : ${CPACK_GENERATOR='RPM;DEB;TGZ;ZIP'}
             : ${CPACK_SOURCE_GENERATOR='RPM;TGZ;ZIP'}
+            : ${CMAKE_INSTALL_PREFIX:='/usr'}
+            : ${CPACK_PACKAGING_INSTALL_PREFIX:='/usr'}
             ;;
         *Darwin*|*macos*)
             : ${CPACK_GENERATOR="productbuild"}
+            : ${CMAKE_INSTALL_PREFIX:='/usr/local'}
             ;;
         *)
             echo >&2 "⚠️ Unknown toolchain: $toolchain"
@@ -113,6 +116,7 @@ case "$toolchain" in
     cmake --no-warn-unused-cli \
         -DCMAKE_TOOLCHAIN_FILE="$toolchain" \
         -DCMAKE_BUILD_TYPE="$build_type" \
+        -DCMAKE_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX:-/usr/local}" \
         -DCPACK_RPM_PACKAGE_SOURCES=${CPACK_RPM_PACKAGE_SOURCES:=OFF} \
         -DCPACK_GENERATOR="$CPACK_GENERATOR"  \
         -DCPACK_SOURCE_GENERATOR="$CPACK_SOURCE_GENERATOR"  \

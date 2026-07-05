@@ -18,6 +18,13 @@ configure_file(
   @ONLY
 )
 
+# Generate Arch Linux PKGBUILD from template
+configure_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/arch/PKGBUILD.in"
+  "${CMAKE_CURRENT_SOURCE_DIR}/arch/PKGBUILD"
+  @ONLY
+)
+
 string(TOUPPER "${CMAKE_SYSTEM_NAME}" uppercase_CMAKE_SYSTEM_NAME)
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Force static library build")
@@ -328,19 +335,59 @@ set(CPACK_SOURCE_IGNORE_FILES
 # Limit packaging to only the specified components.
 set(CPACK_COMPONENTS_ALL applications config)
 
+include(GNUInstallDirs)
+
 message(STATUS "CMAKE_INSTALL_PREFIX: ${CMAKE_INSTALL_PREFIX}")
-set(BEECTL_MANIFEST_TARGET_PATH "${CMAKE_INSTALL_PREFIX}/bin/beectl")
-set(BEECTL_CHROME_MANIFEST_DIR "etc/opt/chrome/native-messaging-hosts")
-set(BEECTL_CHROMIUM_MANIFEST_DIR "etc/chromium/native-messaging-hosts")
+
+# Determine if we are installing to a standard system prefix
+if(CMAKE_INSTALL_PREFIX STREQUAL "/usr" OR CMAKE_INSTALL_PREFIX STREQUAL "/usr/local" OR CMAKE_INSTALL_PREFIX STREQUAL "/")
+    set(BEECTL_STANDARD_PREFIX ON)
+else()
+    set(BEECTL_STANDARD_PREFIX OFF)
+endif()
+
+set(BEECTL_BIN_DIR "${CMAKE_INSTALL_BINDIR}" CACHE STRING "Install directory for the beectl executable")
+set(BEECTL_MANIFEST_TARGET_PATH "${CMAKE_INSTALL_PREFIX}/${BEECTL_BIN_DIR}/beectl" CACHE STRING "Path to beectl executable in the manifest files")
+
+if(uppercase_CMAKE_SYSTEM_NAME MATCHES DARWIN)
+    set(default_chrome_manifest_dir "Library/Google/Chrome/NativeMessagingHosts")
+    set(default_chromium_manifest_dir "Library/Application Support/Chromium/NativeMessagingHosts")
+    set(default_firefox_manifest_dir "Library/Application Support/Mozilla/NativeMessagingHosts")
+    set(default_doc_dir "Library/Application Support/beectl")
+else()
+    # On Linux/UNIX, use absolute system-wide paths if installing to a standard prefix.
+    # Otherwise, use relative paths to support custom installation sandboxes and relocatable TGZ packaging.
+    if(BEECTL_STANDARD_PREFIX)
+        set(default_chrome_manifest_dir "/etc/opt/chrome/native-messaging-hosts")
+        set(default_chromium_manifest_dir "/etc/chromium/native-messaging-hosts")
+        set(default_firefox_manifest_dir "/usr/lib/mozilla/native-messaging-hosts")
+        set(default_firefox_manifest_dir_alt "/usr/lib64/mozilla/native-messaging-hosts")
+        
+        if(CMAKE_INSTALL_PREFIX STREQUAL "/")
+            set(default_doc_dir "usr/share/doc/osmanov/beectl")
+        else()
+            set(default_doc_dir "share/doc/osmanov/beectl")
+        endif()
+    else()
+        set(default_chrome_manifest_dir "etc/opt/chrome/native-messaging-hosts")
+        set(default_chromium_manifest_dir "etc/chromium/native-messaging-hosts")
+        set(default_firefox_manifest_dir "usr/lib/mozilla/native-messaging-hosts")
+        set(default_firefox_manifest_dir_alt "usr/lib64/mozilla/native-messaging-hosts")
+        set(default_doc_dir "share/doc/osmanov/beectl")
+    endif()
+endif()
+
+set(BEECTL_CHROME_MANIFEST_DIR "${default_chrome_manifest_dir}" CACHE STRING "Chrome manifest install directory")
+set(BEECTL_CHROMIUM_MANIFEST_DIR "${default_chromium_manifest_dir}" CACHE STRING "Chromium manifest install directory")
+set(BEECTL_FIREFOX_MANIFEST_DIR "${default_firefox_manifest_dir}" CACHE STRING "Firefox manifest install directory")
 
 if(UNIX AND NOT APPLE)
-    include(GNUInstallDirs)
-
-    set(BEECTL_FIREFOX_MANIFEST_DIR "usr/lib/mozilla/native-messaging-hosts")
     # Fedora uses /usr/lib64 while Pop OS uses /usr/lib for amd64. So we install both.
-    set(BEECTL_FIREFOX_MANIFEST_DIR_ALT "usr/lib64/mozilla/native-messaging-hosts")
-else()
-    set(BEECTL_FIREFOX_MANIFEST_DIR "usr/lib/mozilla/native-messaging-hosts")
+    set(BEECTL_FIREFOX_MANIFEST_DIR_ALT "${default_firefox_manifest_dir_alt}" CACHE STRING "Alternative Firefox manifest install directory")
+endif()
+
+if(NOT CMAKE_DOC_DIR)
+    set(CMAKE_DOC_DIR "${default_doc_dir}" CACHE STRING "Installation directory for documentation")
 endif()
 
 # RPM package properties
@@ -389,19 +436,12 @@ if(NOT CPACK_DEBIAN_PACKAGE_ARCHITECTURE)
     set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "${CMAKE_SYSTEM_PROCESSOR}")
 endif(NOT CPACK_DEBIAN_PACKAGE_ARCHITECTURE)
 set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "${CPACK_PACKAGE_HOMEPAGE_URL}")
-set(CPACK_DEBIAN_PACKAGE_RELEASE, "${CPACK_PACKAGE_RELEASE}")
+set(CPACK_DEBIAN_PACKAGE_RELEASE "${CPACK_PACKAGE_RELEASE}")
 set(CPACK_DEBIAN_PACKAGE_SECTION "web")
 
 # Install docs
-if(uppercase_CMAKE_SYSTEM_NAME MATCHES DARWIN)
-    if(NOT CMAKE_DOC_DIR)
-        set(CMAKE_DOC_DIR "Library/Application Support/beectl")
-    endif(NOT CMAKE_DOC_DIR)
-else()
-    if(NOT CMAKE_DOC_DIR)
-        set(CMAKE_DOC_DIR usr/share/doc/osmanov/beectl)
-        list(APPEND CPACK_RPM_RELOCATION_PATHS "${CMAKE_DOC_DIR}")
-    endif(NOT CMAKE_DOC_DIR)
+if(NOT uppercase_CMAKE_SYSTEM_NAME MATCHES DARWIN)
+    list(APPEND CPACK_RPM_RELOCATION_PATHS "${CMAKE_DOC_DIR}")
 endif()
 install(FILES LICENSE README.md DESTINATION "${CMAKE_DOC_DIR}" COMPONENT config)
 
@@ -455,35 +495,9 @@ if(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
         "${CMAKE_CURRENT_BINARY_DIR}/beectl.wxs"
         @ONLY
     )
-    configure_file(
-        chrome-com.ruslan_osmanov.bee.json.in
-        "${BEECTL_CHROME_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
-        @ONLY)
-    configure_file(
-        chrome-com.ruslan_osmanov.bee.json.in
-        "${BEECTL_CHROMIUM_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
-        @ONLY)
-    configure_file(
-        firefox-com.ruslan_osmanov.bee.json.in
-        "${BEECTL_FIREFOX_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
-        @ONLY)
-
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${BEECTL_CHROME_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
-        DESTINATION "${BEECTL_CHROME_MANIFEST_DIR}"
-        COMPONENT config)
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${BEECTL_CHROMIUM_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
-        DESTINATION "${BEECTL_CHROMIUM_MANIFEST_DIR}"
-        COMPONENT config)
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${BEECTL_FIREFOX_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
-        DESTINATION "${BEECTL_FIREFOX_MANIFEST_DIR}"
-        COMPONENT config)
 elseif(uppercase_CMAKE_SYSTEM_NAME MATCHES DARWIN)
-    set(BEECTL_CHROME_MANIFEST_DIR "Library/Google/Chrome/NativeMessagingHosts")
-    set(BEECTL_CHROMIUM_MANIFEST_DIR "Library/Application Support/Chromium/NativeMessagingHosts")
-    set(BEECTL_FIREFOX_MANIFEST_DIR  "Library/Application Support/Mozilla/NativeMessagingHosts")
-
     # Install host app
-    install(TARGETS beectl RUNTIME DESTINATION usr/local/bin COMPONENT applications)
+    install(TARGETS beectl RUNTIME DESTINATION "${BEECTL_BIN_DIR}" COMPONENT applications)
 
     # productbuild doesn't accept doc files without extensions
     configure_file(
@@ -491,64 +505,42 @@ elseif(uppercase_CMAKE_SYSTEM_NAME MATCHES DARWIN)
         "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt"
         @ONLY)
     set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
-
-    configure_file(
-        chrome-com.ruslan_osmanov.bee.json.in
-        "${BEECTL_CHROME_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
-        @ONLY)
-    configure_file(
-        chrome-com.ruslan_osmanov.bee.json.in
-        "${BEECTL_CHROMIUM_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
-        @ONLY)
-    configure_file(
-        firefox-com.ruslan_osmanov.bee.json.in
-        "${BEECTL_FIREFOX_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
-        @ONLY)
-
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${BEECTL_CHROME_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
-        DESTINATION "${BEECTL_CHROME_MANIFEST_DIR}"
-        COMPONENT config)
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${BEECTL_CHROMIUM_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
-        DESTINATION "${BEECTL_CHROMIUM_MANIFEST_DIR}"
-        COMPONENT config)
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${BEECTL_FIREFOX_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
-        DESTINATION "${BEECTL_FIREFOX_MANIFEST_DIR}"
-        COMPONENT config)
 else(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
     # Install host app
-    install(TARGETS beectl RUNTIME DESTINATION usr/local/bin COMPONENT applications)
-
-    configure_file(
-        chrome-com.ruslan_osmanov.bee.json.in
-        "${BEECTL_CHROME_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
-        @ONLY)
-    configure_file(
-        chrome-com.ruslan_osmanov.bee.json.in
-        "${BEECTL_CHROMIUM_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
-        @ONLY)
-    configure_file(
-        firefox-com.ruslan_osmanov.bee.json.in
-        "${BEECTL_FIREFOX_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
-        @ONLY)
-
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${BEECTL_CHROME_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
-        DESTINATION "${BEECTL_CHROME_MANIFEST_DIR}"
-        COMPONENT config)
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${BEECTL_CHROMIUM_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
-        DESTINATION "${BEECTL_CHROMIUM_MANIFEST_DIR}"
-        COMPONENT config)
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${BEECTL_FIREFOX_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
-        DESTINATION "${BEECTL_FIREFOX_MANIFEST_DIR}"
-        COMPONENT config)
+    install(TARGETS beectl RUNTIME DESTINATION "${BEECTL_BIN_DIR}" COMPONENT applications)
 endif(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
+
+# Generate and install browser manifest files globally
+foreach(browser chrome chromium firefox)
+    if(browser STREQUAL "firefox")
+        set(template "firefox-com.ruslan_osmanov.bee.json.in")
+        set(dest "${BEECTL_FIREFOX_MANIFEST_DIR}")
+    elseif(browser STREQUAL "chrome")
+        set(template "chrome-com.ruslan_osmanov.bee.json.in")
+        set(dest "${BEECTL_CHROME_MANIFEST_DIR}")
+    else()
+        set(template "chrome-com.ruslan_osmanov.bee.json.in")
+        set(dest "${BEECTL_CHROMIUM_MANIFEST_DIR}")
+    endif()
+
+    configure_file(
+        "${template}"
+        "manifests_build/${browser}/com.ruslan_osmanov.bee.json"
+        @ONLY)
+
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/manifests_build/${browser}/com.ruslan_osmanov.bee.json"
+        DESTINATION "${dest}"
+        COMPONENT config)
+endforeach()
 
 # Install manifest to an alternative location to address the issue of different conventions
 # on the /usr/lib and /usr/lib64 directories across Linux distros (Fedora uses /usr/lib64,
 # Pop OS uses /usr/lib, Arch uses /usr/lib etc.)
 if(BEECTL_FIREFOX_MANIFEST_DIR_ALT)
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${BEECTL_FIREFOX_MANIFEST_DIR}/com.ruslan_osmanov.bee.json"
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/manifests_build/firefox/com.ruslan_osmanov.bee.json"
         DESTINATION "${BEECTL_FIREFOX_MANIFEST_DIR_ALT}"
         COMPONENT config)
 endif()
 
+set(CPACK_SET_DESTDIR ON)
 include(CPack)
