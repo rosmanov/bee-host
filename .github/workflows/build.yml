@@ -104,8 +104,8 @@ jobs:
 
       - name: Add NSIS to PATH
         run: |
-          echo "C:\Program Files (x86)\NSIS" >> $env:GITHUB_PATH
-        shell: pwsh
+          echo "C:\Program Files (x86)\NSIS" >> $GITHUB_PATH
+        shell: bash
 
       - name: Configure CMake
         run: |
