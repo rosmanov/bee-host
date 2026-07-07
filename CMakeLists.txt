@@ -585,5 +585,7 @@ if(BEECTL_FIREFOX_MANIFEST_DIR_ALT)
         COMPONENT config)
 endif()
 
-set(CPACK_SET_DESTDIR ON)
+if(CPACK_GENERATOR MATCHES "DEB|RPM|TGZ")
+    set(CPACK_SET_DESTDIR ON)
+endif()
 include(CPack)
