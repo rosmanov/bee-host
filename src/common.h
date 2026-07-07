@@ -31,6 +31,13 @@
 # endif
 #endif
 
+#ifdef WINDOWS
+# include <winsock2.h>
+# include <windows.h>
+#else
+# include <unistd.h>
+#endif
+
 #ifndef STDIN_FILENO
 # define STDIN_FILENO _fileno (stdin)
 #endif
@@ -92,11 +99,9 @@
 #endif /* WINDOWS */
 #define DIR_SEPARATOR_LEN sizeof (char)
 
-#ifdef WINDOWS
-# include <winsock2.h>
-# include <windows.h>
-#else
-# include <unistd.h>
+#ifdef _MSC_VER
+# include <basetsd.h>
+typedef SSIZE_T ssize_t;
 #endif
 
 #endif /* __BEECTL_COMMON_H__ */

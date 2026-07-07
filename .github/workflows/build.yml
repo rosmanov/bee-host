@@ -76,8 +76,8 @@ jobs:
 
       - name: Package
         run: |
-          cpack --config build/macos-${{ matrix.arch }}/CPackConfig.cmake \
-            -C Release
+          cd build/macos-${{ matrix.arch }}
+          cpack -C Release
 
       - name: Upload Artifacts
         if: ${{ !env.ACT }}

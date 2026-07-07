@@ -261,9 +261,15 @@ add_custom_command(TARGET beectl POST_BUILD
 endif()
 
 target_compile_features(beectl PRIVATE c_variadic_macros)
-target_compile_options(beectl PRIVATE
-  "$<$<CONFIG:Release>:-Os;-ffunction-sections;-fdata-sections;-DNDEBUG>"
-)
+if(MSVC)
+  target_compile_options(beectl PRIVATE
+    "$<$<CONFIG:Release>:/O1;/Gy;/DNDEBUG>"
+  )
+else()
+  target_compile_options(beectl PRIVATE
+    "$<$<CONFIG:Release>:-Os;-ffunction-sections;-fdata-sections;-DNDEBUG>"
+  )
+endif()
 
 # Include directories (using standardized variables from setup functions)
 target_include_directories(beectl PRIVATE
@@ -287,7 +293,10 @@ target_link_libraries(beectl PRIVATE
 # Platform-specific system libraries
 if(WIN32)
   # For libuv on Windows/MinGW
-  target_link_libraries(beectl PRIVATE ws2_32 iphlpapi dbghelp userenv ssp)
+  target_link_libraries(beectl PRIVATE ws2_32 iphlpapi dbghelp userenv)
+  if(NOT MSVC)
+    target_link_libraries(beectl PRIVATE ssp)
+  endif()
 endif()
 
 if(UNIX AND NOT APPLE)
