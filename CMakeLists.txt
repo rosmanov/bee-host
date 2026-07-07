@@ -152,6 +152,7 @@ function(setup_external_dependencies)
   endif()
   if(CMAKE_MSVC_RUNTIME_LIBRARY)
     list(APPEND cjson_cmake_args
+      -DCMAKE_POLICY_DEFAULT_CMP0091=NEW
       -DCMAKE_MSVC_RUNTIME_LIBRARY=${CMAKE_MSVC_RUNTIME_LIBRARY}
     )
   endif()
@@ -204,6 +205,7 @@ function(setup_external_dependencies)
   endif()
   if(CMAKE_MSVC_RUNTIME_LIBRARY)
     list(APPEND libuv_cmake_args
+      -DCMAKE_POLICY_DEFAULT_CMP0091=NEW
       -DCMAKE_MSVC_RUNTIME_LIBRARY=${CMAKE_MSVC_RUNTIME_LIBRARY}
     )
   endif()
