@@ -150,6 +150,11 @@ function(setup_external_dependencies)
       -DCMAKE_TOOLCHAIN_FILE:FILEPATH=${CMAKE_TOOLCHAIN_FILE}
     )
   endif()
+  if(CMAKE_MSVC_RUNTIME_LIBRARY)
+    list(APPEND cjson_cmake_args
+      -DCMAKE_MSVC_RUNTIME_LIBRARY=${CMAKE_MSVC_RUNTIME_LIBRARY}
+    )
+  endif()
   if(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
       list(APPEND cjson_cmake_args -DWIN32=ON)
   endif()
@@ -195,6 +200,11 @@ function(setup_external_dependencies)
   if(CMAKE_TOOLCHAIN_FILE)
     list(APPEND libuv_cmake_args
       -DCMAKE_TOOLCHAIN_FILE:FILEPATH=${CMAKE_TOOLCHAIN_FILE}
+    )
+  endif()
+  if(CMAKE_MSVC_RUNTIME_LIBRARY)
+    list(APPEND libuv_cmake_args
+      -DCMAKE_MSVC_RUNTIME_LIBRARY=${CMAKE_MSVC_RUNTIME_LIBRARY}
     )
   endif()
   if(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
