@@ -221,41 +221,50 @@ sudo apt purge beectl
 
 The project uses CMake and platform-specific toolchains located in `CMake/Toolchain-*.cmake`. The default compiler is GCC for Linux and MinGW-GCC for Windows.
 
-### Cross-Compilation
+### Cross-Platform Build (GitHub Actions)
 
-To cross-compile for different platforms, you can use the `build-cross.sh` script. This script requires Docker to be installed and configured:
+The project includes a GitHub Actions workflow that automatically builds and packages the application for all 9 target combinations (Linux amd64/i386/arm/aarch64/ppc64le, Windows amd64/i686, macOS x86_64/arm64) using native runners and optimized cross-compilers.
+
+To trigger the build, simply push to `master`/`main` or open a pull request. The workflow can also be triggered manually using the `workflow_dispatch` event on GitHub.
+
+#### Running Cross-Platform Builds Locally (`act`)
+
+You can easily run the GitHub Actions build pipeline locally using the [`act`](https://github.com/nektos/act) command line tool:
 
 ```bash
-./build-cross.sh
+# Run the Linux builds locally
+act -b -j build-linux
 ```
 
-### Native Linux (amd64)
+### Native Builds
+
+For local native builds, you can use the target-specific scripts or run `cmake` directly.
+
+#### Native Linux (amd64)
 
 ```bash
 ./build-linux-amd64.sh -b Release
 ```
 
-### Native Linux (i386)
+#### Native Linux (i386)
 
 ```bash
 ./build-linux-i386.sh -b Release
 ```
 
-### Cross-Compilation for Windows (i686)
+#### Native macOS
 
 ```bash
-./build-win-i686.sh -b Release
+./build-macos.sh -b Release
 ```
 
-### Other Architectures
+#### Other Architectures / Custom Toolchains
 
-Custom toolchains can be used as follows:
+You can build with a custom toolchain file:
 
 ```bash
 ./build.sh /path/to/custom-toolchain.cmake -b Release
 ```
-
-Toolchains for other CPU architectures can be added on request.
 
 ### Debug Builds
 
@@ -265,19 +274,13 @@ By default, `./build.sh` builds a debug version if `-b` is not specified. Exampl
 ./build.sh all -b Debug
 ```
 
-This will iterate over all `Toolchain-*.cmake` files in the `CMake` directory.
-
-To cross-compile for all platforms, you can use:
-
-```bash
-./build-cross.sh -b Debug
-```
+This will iterate over all `Toolchain-*.cmake` files in the `CMake` directory on macOS/Linux.
 
 ---
 
 ## Packaging
 
-The build scripts (`build.sh`, `build-cross.sh` and others) automatically generate CPack configuration files.
+The build scripts (`build.sh` and others) automatically generate CPack configuration files.
 
 To manually create a package, you can run:
 

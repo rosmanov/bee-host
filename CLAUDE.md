@@ -85,10 +85,11 @@ bee-host/
 ./build.sh -b Debug
 ```
 
-**Cross-compile for all platforms (requires Docker):**
+**Cross-compile for all platforms (via GitHub Actions / act):**
 
 ```bash
-./build-cross.sh -b Release
+# Run the build-linux job locally
+act -j build-linux
 ```
 
 **Custom toolchain:**
@@ -192,7 +193,7 @@ SET_BINARY_MODE(fd) // Handle binary mode for Windows
 - **`build.sh`** - Generic build script that accepts toolchain path
 - **`build-linux-*.sh`** - Linux build shortcuts for specific architectures
 - **`build-macos.sh`** - macOS build script
-- **`build-cross.sh`** - Docker-based cross-compilation script
+- **`.github/workflows/build.yml`** - GitHub Actions workflow for cross-platform builds and packaging
 - **`helpers.sh`** - Common shell functions used by build scripts
 
 **CMake Options:**
@@ -247,7 +248,7 @@ SET_BINARY_MODE(fd) // Handle binary mode for Windows
 
 - **Windows builds** require MinGW toolchain (e.g., `x86_64-w64-mingw32-gcc`)
 - **ARM/PowerPC builds** require appropriate cross-compiler (e.g., `arm-linux-gnueabihf-gcc`)
-- **Docker-based builds** (`build-cross.sh`) handle toolchain setup automatically
+- **GitHub Actions builds** handle toolchain and compiler setup automatically on native and cross runners
 - Toolchains must define both C and C++ compilers (required by some dependencies)
 
 ### Nix Flake Support
@@ -353,7 +354,7 @@ This sends a test message to the native host and verifies the response.
 2. Update `changelog` file (for RPM packages)
 3. Run CMake to regenerate `flake.nix`: `cd build && cmake ..`
 4. Commit version changes: `git add CMakeLists.txt changelog flake.nix`
-5. Build packages for all platforms: `./build-cross.sh -b Release`
+5. Build packages for all platforms: run the GitHub Actions `Cross-Platform Build` workflow (or run locally using `act`)
 6. Test packages on target systems
 7. Tag release in Git: `git tag -a vX.Y.Z -m "Release X.Y.Z"`
 8. Upload packages to GitHub Releases and SourceForge

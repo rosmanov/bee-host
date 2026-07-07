@@ -1,0 +1,137 @@
+name: Cross-Platform Build
+
+on:
+  push:
+    branches: [master, main]
+    tags: ["[0-9]*"]
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    name: Build Linux (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, i386, arm, aarch64, ppc64le]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake make git build-essential rpm
+          if [ "${{ matrix.arch }}" = "i386" ]; then
+            sudo dpkg --add-architecture i386
+            sudo apt-get update
+            sudo apt-get install -y gcc-multilib g++-multilib libc6-dev:i386
+          elif [ "${{ matrix.arch }}" = "arm" ]; then
+            sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
+          elif [ "${{ matrix.arch }}" = "aarch64" ]; then
+            sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          elif [ "${{ matrix.arch }}" = "ppc64le" ]; then
+            sudo apt-get install -y gcc-powerpc64le-linux-gnu g++-powerpc64le-linux-gnu
+          fi
+
+      - name: Build and Package
+        run: |
+          ./build.sh CMake/Toolchain-Linux-${{ matrix.arch }}.cmake -b Release -d build/linux-${{ matrix.arch }}
+
+      - name: Upload Artifacts
+        if: ${{ !env.ACT }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.arch }}
+          path: |
+            build/linux-${{ matrix.arch }}/*.rpm
+            build/linux-${{ matrix.arch }}/*.deb
+            build/linux-${{ matrix.arch }}/*.tar.gz
+            build/linux-${{ matrix.arch }}/*.tgz
+
+  build-macos:
+    name: Build macOS (${{ matrix.arch }})
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64, arm64]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure CMake
+        run: |
+          cmake -B build/macos-${{ matrix.arch }} -S . \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }} \
+            -DPACKAGE_ARCH=${{ matrix.arch }} \
+            -DCPACK_GENERATOR=productbuild
+
+      - name: Build
+        run: |
+          cmake --build build/macos-${{ matrix.arch }} --config Release
+
+      - name: Package
+        run: |
+          cpack --config build/macos-${{ matrix.arch }}/CPackConfig.cmake \
+            -C Release
+
+      - name: Upload Artifacts
+        if: ${{ !env.ACT }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}
+          path: |
+            build/macos-${{ matrix.arch }}/*.pkg
+
+  build-windows:
+    name: Build Windows (${{ matrix.cpu }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            cpu: amd64
+          - arch: Win32
+            cpu: i686
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Add NSIS to PATH
+        run: |
+          echo "C:\Program Files (x86)\NSIS" >> $env:GITHUB_PATH
+        shell: pwsh
+
+      - name: Configure CMake
+        run: |
+          cmake -B build-win-${{ matrix.cpu }} -S . `
+            -A ${{ matrix.arch }} `
+            -DCPACK_GENERATOR="NSIS;ZIP" `
+            -DPACKAGE_ARCH=${{ matrix.cpu }} `
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+        shell: pwsh
+
+      - name: Build
+        run: |
+          cmake --build build-win-${{ matrix.cpu }} --config Release
+        shell: pwsh
+
+      - name: Package
+        run: |
+          cd build-win-${{ matrix.cpu }}
+          cpack -C Release
+        shell: pwsh
+
+      - name: Upload Artifacts
+        if: ${{ !env.ACT }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{ matrix.cpu }}
+          path: |
+            build-win-${{ matrix.cpu }}/*.zip
+            build-win-${{ matrix.cpu }}/*.exe

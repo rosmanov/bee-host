@@ -134,8 +134,6 @@ function(setup_external_dependencies)
       -DENABLE_CJSON_UTILS=On
       -DENABLE_TARGET_EXPORT=On
       -DCMAKE_POLICY_VERSION_MINIMUM=3.5
-      -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-      -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
       -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
       -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
       -DCMAKE_EXE_LINKER_FLAGS=${CMAKE_EXE_LINKER_FLAGS}
@@ -143,6 +141,11 @@ function(setup_external_dependencies)
       -DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}
       -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}
   )
+  if(CMAKE_TOOLCHAIN_FILE)
+    list(APPEND cjson_cmake_args
+      -DCMAKE_TOOLCHAIN_FILE:FILEPATH=${CMAKE_TOOLCHAIN_FILE}
+    )
+  endif()
   if(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
       list(APPEND cjson_cmake_args -DWIN32=ON)
   endif()
@@ -174,8 +177,6 @@ function(setup_external_dependencies)
   set(libuv_cmake_args
     -DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}
     -DCMAKE_SYSTEM_PROCESSOR=${CMAKE_SYSTEM_PROCESSOR}
-    -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-    -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
     -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
     -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
     -DCMAKE_EXE_LINKER_FLAGS=${CMAKE_EXE_LINKER_FLAGS}
@@ -187,6 +188,11 @@ function(setup_external_dependencies)
     -DCMAKE_POSITION_INDEPENDENT_CODE=ON
     -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}
   )
+  if(CMAKE_TOOLCHAIN_FILE)
+    list(APPEND libuv_cmake_args
+      -DCMAKE_TOOLCHAIN_FILE:FILEPATH=${CMAKE_TOOLCHAIN_FILE}
+    )
+  endif()
   if(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
     list(APPEND libuv_cmake_args -DWIN32=ON)
   endif()
@@ -247,12 +253,12 @@ add_executable(beectl ${BEECTL_SRCS})
 #add_custom_command(TARGET beectl PRE_BUILD
     #BYPRODUCTS "${CJSON_SOURCE_DIR}/cJSON.c"
     #COMMAND touch "${CJSON_SOURCE_DIR}/cJSON.c")
-if(APPLE)
+if(APPLE AND CMAKE_BUILD_TYPE STREQUAL "Release")
 add_custom_command(TARGET beectl POST_BUILD
     COMMAND strip -x $<TARGET_FILE:beectl>
     COMMENT "Stripping local symbols to reduce binary size"
 )
-endif(APPLE)
+endif()
 
 target_compile_features(beectl PRIVATE c_variadic_macros)
 target_compile_options(beectl PRIVATE
@@ -296,12 +302,12 @@ if(BEECTL_EXTERNAL_TARGETS)
   add_dependencies(beectl ${BEECTL_EXTERNAL_TARGETS})
 endif()
 
-# The following would be better approach than including cJSON files in our
-# source list. But the build fails when cross-compiling, since
-# ExternalProject_Add() does not regard the CMAKE_TOOLCHAIN_FILE. Passing
-# CMAKE_TOOLCHAIN_FILE via CMAKE_ARGS didn't work either.
-#target_link_libraries(beectl
-    #"${CJSON_BINARY_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}cjson${CMAKE_STATIC_LIBRARY_SUFFIX}")
+# ExternalProject_Add() creates an independent CMake invocation.
+# Pass the parent toolchain file explicitly for cross-compilation.
+
+if(NOT DEFINED PACKAGE_ARCH)
+    set(PACKAGE_ARCH "${CMAKE_SYSTEM_PROCESSOR}" CACHE STRING "Package architecture")
+endif()
 
 
 # CPack common properties
@@ -314,7 +320,7 @@ set(CPACK_PACKAGE_INSTALL_REGISTRY_KEY "${PROJECT_NAME}")
 set(OLD_CPACK_PACKAGING_INSTALL_PREFIX "${CPACK_PACKAGING_INSTALL_PREFIX}")
 set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 set(CPACK_PACKAGE_FILE_NAME
-  "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}.${CMAKE_SYSTEM_PROCESSOR}.${CMAKE_BUILD_TYPE}")
+    "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}.${PACKAGE_ARCH}.${CMAKE_BUILD_TYPE}")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 set(CPACK_SOURCE_IGNORE_FILES
     "/build/"
@@ -433,7 +439,19 @@ set(CPACK_PACKAGING_INSTALL_PREFIX "${OLD_CPACK_PACKAGING_INSTALL_PREFIX}")
 
 # DEB package properties
 if(NOT CPACK_DEBIAN_PACKAGE_ARCHITECTURE)
-    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "${CMAKE_SYSTEM_PROCESSOR}")
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64)$")
+        set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE amd64)
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(i686|i386)$")
+        set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE i386)
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^arm")
+        set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE armhf)
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)$")
+        set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE arm64)
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^ppc64le")
+        set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE ppc64el)
+    else()
+        set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "${CMAKE_SYSTEM_PROCESSOR}")
+    endif()
 endif(NOT CPACK_DEBIAN_PACKAGE_ARCHITECTURE)
 set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "${CPACK_PACKAGE_HOMEPAGE_URL}")
 set(CPACK_DEBIAN_PACKAGE_RELEASE "${CPACK_PACKAGE_RELEASE}")
