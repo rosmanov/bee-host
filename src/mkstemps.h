@@ -5,4 +5,8 @@
 extern int mkstemps (char* template, int len);
 #endif
 
+#ifndef HAVE_MKSTEMP
+# define mkstemp(template) mkstemps (template, 0)
+#endif
+
 #endif
