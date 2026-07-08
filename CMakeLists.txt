@@ -539,8 +539,19 @@ if(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
         @ONLY
     )
 elseif(uppercase_CMAKE_SYSTEM_NAME MATCHES DARWIN)
+    # The productbuild generator uses CPACK_PACKAGING_INSTALL_PREFIX as the pkg
+    # install-location. When it is empty (the RPM block above resets it), the
+    # generator falls back to "/Applications", so the payload ends up under
+    # /Applications/bin/beectl instead of /usr/local/bin/beectl. Force the pkg
+    # to install relative to the filesystem root and make the destinations
+    # root-relative so the binary lands in /usr/local/bin and the browser
+    # manifests in /Library/... (the system-wide native-messaging locations).
+    set(CPACK_PACKAGING_INSTALL_PREFIX "/")
+    string(REGEX REPLACE "^/" "" BEECTL_MACOS_BIN_DIR
+        "${CMAKE_INSTALL_PREFIX}/${BEECTL_BIN_DIR}")
+
     # Install host app
-    install(TARGETS beectl RUNTIME DESTINATION "${BEECTL_BIN_DIR}" COMPONENT applications)
+    install(TARGETS beectl RUNTIME DESTINATION "${BEECTL_MACOS_BIN_DIR}" COMPONENT applications)
 
     # productbuild doesn't accept doc files without extensions
     configure_file(
