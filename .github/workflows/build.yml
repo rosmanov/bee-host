@@ -96,6 +96,8 @@ jobs:
         include:
           - arch: x64
             cpu: amd64
+          - arch: ARM64
+            cpu: arm64
           - arch: Win32
             cpu: i686
     steps:
@@ -111,6 +113,14 @@ jobs:
       - name: Check NSIS
         run: |
           makensis /VERSION
+        shell: pwsh
+
+      - name: Install ARM64 compiler tools
+        if: matrix.arch == 'ARM64'
+        run: |
+          choco install visualstudio2022-workload-vctools `
+            --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.ARM64" `
+            -y
         shell: pwsh
 
       - name: Configure CMake
