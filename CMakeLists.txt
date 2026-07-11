@@ -522,12 +522,14 @@ if(uppercase_CMAKE_SYSTEM_NAME MATCHES WINDOWS)
     set(CPACK_NSIS_EXTRA_INSTALL_COMMANDS "
         WriteRegStr HKCU 'Software\\\\${PROJECT_NAME}' 'Install Directory' '$INSTDIR'
         WriteRegStr HKCU 'Software\\\\Google\\\\Chrome\\\\NativeMessagingHosts\\\\com.ruslan_osmanov.bee' '' '$INSTDIR\\\\${BEECTL_NSIS_CHROME_MANIFEST_DIR}\\\\com.ruslan_osmanov.bee.json'
+        WriteRegStr HKCU 'Software\\\\Chromium\\\\NativeMessagingHosts\\\\com.ruslan_osmanov.bee' '' '$INSTDIR\\\\${BEECTL_NSIS_CHROME_MANIFEST_DIR}\\\\com.ruslan_osmanov.bee.json'
         WriteRegStr HKCU 'Software\\\\Mozilla\\\\NativeMessagingHosts\\\\com.ruslan_osmanov.bee' '' '$INSTDIR\\\\${BEECTL_NSIS_FIREFOX_MANIFEST_DIR}\\\\com.ruslan_osmanov.bee.json'
     ")
     set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "
         DeleteRegKey HKCU 'Software\\\\${PROJECT_NAME}'
-        DeleteRegKey HKCU 'Software\\\\Google\\\\Chrome\\\\NativeMessagingHosts'
-        DeleteRegKey HKCU 'Software\\\\Mozilla\\\\NativeMessagingHosts'
+        DeleteRegKey HKCU 'Software\\\\Google\\\\Chrome\\\\NativeMessagingHosts\\\\com.ruslan_osmanov.bee'
+        DeleteRegKey HKCU 'Software\\\\Chromium\\\\NativeMessagingHosts\\\\com.ruslan_osmanov.bee'
+        DeleteRegKey HKCU 'Software\\\\Mozilla\\\\NativeMessagingHosts\\\\com.ruslan_osmanov.bee'
     ")
     #configure_file(
     #${PROJECT_SOURCE_DIR}/CMake/modules/nsis/NSIS.definitions.nsh.in
