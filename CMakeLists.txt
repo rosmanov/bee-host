@@ -299,6 +299,7 @@ target_compile_definitions(beectl PRIVATE
   PROJECT_COPYRIGHT="\(C\) 2019-2025 ${PROJECT_CONTACT}"
   PROJECT_LICENSE="${PROJECT_LICENSE}"
   PROJECT_BUILD_TYPE="$<CONFIG>"
+  WIN32_LEAN_AND_MEAN  # Avoid legacy Windows APIs and link stage errors
 )
 
 # Link libraries (using standardized variables from setup functions)
