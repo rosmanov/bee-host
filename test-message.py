@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Testing on Windows in PowerShell:
+# cmd /c "python .\test-message.py | C:\Users\rrosm\projects\bee-host\build\Debug\beectl.exe"
+# Note: don't use cat or Get-Content, since they modify the output.
 
 import json
 import struct
