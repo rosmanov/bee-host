@@ -189,6 +189,19 @@ macOS:
 ./build-macos.sh -b Release
 ```
 
+Windows (PowerShell):
+
+First, install [NSIS](https://nsis.sourceforge.io/) (for packaging) and ensure it is in your `PATH` (e.g., via Chocolatey: `choco install nsis -y`).
+
+Then configure, build, and package:
+
+```powershell
+cmake -B build -S . -DCPACK_GENERATOR="NSIS;ZIP" -DCMAKE_BUILD_TYPE=Release -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+cmake --build build --config Release
+cd build
+cpack -C Release
+```
+
 Custom toolchain:
 
 ```bash
