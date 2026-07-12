@@ -73,10 +73,12 @@ print_help ()
 {
   printf ("%s.\n\n"
           "Version: %s\n"
+          "Build type: %s\n"
           "Copyright: %s\n"
           "License: %s\n",
           PROJECT_DESCRIPTION,
           PROJECT_VERSION,
+          PROJECT_BUILD_TYPE,
           PROJECT_COPYRIGHT,
           PROJECT_LICENSE);
 }
