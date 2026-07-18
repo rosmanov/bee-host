@@ -22,29 +22,194 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#include "common.h"
 #include "io.h"
-#include "str.h"
+#include "common.h"
 #include "mkstemps.h"
+#include "str.h"
 
-#include <stdlib.h> /*  malloc free memset mkstemp mkstemps */
-#include <stdio.h> /* perror */
-#include <string.h> /* memset */
-#include <errno.h>
 #include <assert.h>
-#include <fcntl.h> /* setmode, _O_CREAT/_O_CREAT/_O_EXCL/_O_APPEND */
-#include <sys/types.h>
+#include <errno.h>
+#include <fcntl.h>  /* setmode, _O_CREAT/_O_CREAT/_O_EXCL/_O_APPEND */
+#include <stdio.h>  /* perror */
+#include <stdlib.h> /*  malloc free memset mkstemp mkstemps */
+#include <string.h> /* memset */
 #include <sys/stat.h>
+#include <sys/types.h>
 
 #ifdef WINDOWS
-# include <wchar.h>
-# include <io.h> /* _access, read, _mktemp_s, _open */
-# include <process.h> /* _execl */
+#include <io.h>      /* _access, read, _mktemp_s, _open */
+#include <process.h> /* _execl */
+#include <wchar.h>
 #endif
 
 #include "cjson/cJSON.h"
 
+static FILE *elog_fp = NULL;
+
 #define TMP_FILENAME_TEMPLATE "chrome_bee_XXXXXXXX"
+
+#ifndef NDEBUG
+void
+elog_close (void)
+{
+  if (elog_fp && elog_fp != stderr)
+    {
+      fclose (elog_fp);
+      elog_fp = NULL;
+    }
+}
+#endif
+
+#ifndef NDEBUG
+FILE *
+elog_stream (void)
+{
+  if (elog_fp)
+    return elog_fp;
+
+  char pathbuf[1024];
+  const char *path = elog_pick_path (pathbuf, sizeof pathbuf);
+
+  /* "a" avoids clobbering from repeated runs; line-buffer for timely writes */
+  elog_fp = fopen (path, "a");
+
+  fprintf (stderr, "log path = %s\n", path);
+  fflush (stderr);
+
+  if (!elog_fp)
+    {
+      elog_fp = stderr; /* last-ditch fallback */
+      return elog_fp;
+    }
+
+#ifndef _WIN32
+  setvbuf (elog_fp, NULL, _IOLBF, 0);
+#endif
+  atexit (elog_close);
+
+  /* Header to spot which file is used */
+  time_t now = time (NULL);
+  char ts[32];
+  strftime (ts, sizeof ts, ELOG_TS_FMT, localtime (&now));
+  fprintf (elog_fp, "[%s] DEBUG: log started at %s\n", ts, path);
+  fflush (elog_fp);
+  fprintf (stderr, "[%s] DEBUG: log started at %s\n", ts, path);
+  fflush (stderr);
+  return elog_fp;
+}
+#endif
+
+#ifndef NDEBUG
+const char *
+elog_pick_path (char *out, size_t outsz)
+{
+  const char *envp = getenv (ELOG_ENV);
+  if (envp && *envp)
+    {
+      /* If env looks like a directory (ends with / or \), build a filename
+       * inside it */
+      char last = envp[strlen (envp) - 1];
+      if (last == '/' || last == '\\')
+        {
+#if ELOG_INCLUDE_PID
+          snprintf (out, outsz, "%s%s_%ld.log", envp, ELOG_DEFAULT_FILE,
+                    (long)getpid ());
+#else
+          snprintf (out, outsz, "%s%s.log", envp, ELOG_DEFAULT_FILE);
+#endif
+          return out;
+        }
+      /* Otherwise treat as a full path */
+      return envp;
+    }
+
+    /* No env override: choose a temp dir */
+#ifdef _WIN32
+  char tdir[MAX_PATH];
+  DWORD n = GetTempPathA ((DWORD)sizeof tdir, tdir);
+  if (!n || n >= sizeof tdir)
+    {
+      /* Fallback to current directory */
+      snprintf (tdir, sizeof tdir, ".\\");
+    }
+
+  /* Ensure trailing separator */
+  size_t L = strlen (tdir);
+  if (L && tdir[L - 1] != '\\' && tdir[L - 1] != '/')
+    strncat (tdir, "\\", sizeof tdir - L - 1);
+
+#if ELOG_INCLUDE_PID
+  snprintf (out, outsz, "%s%s_%ld.log", tdir, ELOG_DEFAULT_FILE,
+            (long)GetCurrentProcessId ());
+#else
+  snprintf (out, outsz, "%s%s.log", tdir, ELOG_DEFAULT_FILE);
+#endif
+#else /* !_WIN32 */
+  const char *tdir = getenv ("TMPDIR");
+  if (!tdir || !*tdir)
+    tdir = "/tmp/";
+
+  /* Ensure trailing slash */
+  char base[PATH_MAX];
+  snprintf (base, sizeof base, "%s", tdir);
+  size_t L = strlen (base);
+  if (L && base[L - 1] != '/')
+    strncat (base, "/", sizeof base - L - 1);
+
+#if ELOG_INCLUDE_PID
+  snprintf (out, outsz, "%s%s_%ld.log", base, ELOG_DEFAULT_FILE,
+            (long)getpid ());
+#else
+  snprintf (out, outsz, "%s%s.log", base, ELOG_DEFAULT_FILE);
+#endif
+#endif /* _WIN32 */
+
+  return out;
+}
+#endif
+
+#ifndef NDEBUG
+void
+elog_vlog (const char *level, const char *file, int line, const char *func,
+           const char *fmt, va_list ap)
+{
+  FILE *fp = elog_stream ();
+  time_t now = time (NULL);
+  char ts[32];
+  va_list ap2;
+  va_copy (ap2, ap);
+
+  strftime (ts, sizeof ts, ELOG_TS_FMT, localtime (&now));
+
+  /* Prefix with timestamp + level + origin */
+  fprintf (fp, "[%s] %s %s:%d %s: ", ts, level, file, line, func);
+  vfprintf (fp, fmt, ap);
+  if (fp != stderr)
+    fflush (fp);
+
+  /* Mirror ERRORs to stderr too (useful outside the browser host) */
+  if (fp != stderr && level[0] == 'E')
+    {
+      fprintf (stderr, "[%s] %s %s:%d %s: ", ts, level, file, line, func);
+      vfprintf (stderr, fmt, ap2);
+      va_end (ap2);
+      fflush (stderr);
+    }
+}
+#endif
+
+#ifndef NDEBUG
+void
+elog_log (const char *level, const char *file, int line, const char *func,
+          const char *fmt, ...)
+{
+  va_list ap;
+
+  va_start (ap, fmt);
+  elog_vlog (level, file, line, func, fmt, ap);
+  va_end (ap);
+}
+#endif
 
 /* Reads exactly `count` bytes from the file descriptor `fd` into `buf`.
    Returns the number of bytes read, or -1 on error.
@@ -79,7 +244,7 @@ read_browser_request (uint32_t *size)
 
   if (unlikely ((text = malloc (*size)) == NULL))
     {
-      perror("Failed to allocate memory for the text");
+      perror ("Failed to allocate memory for the text");
       return text;
     }
 
@@ -117,15 +282,16 @@ read_file_from_fd (int fd, size_t *len)
   text = malloc (*len + 1);
   if (unlikely (text == NULL))
     {
-      elog_error ("Failed to allocate memory for read buffer: %s\n", strerror (errno));
+      elog_error ("Failed to allocate memory for read buffer: %s\n",
+                  strerror (errno));
       return NULL;
     }
   memset (text, 0, *len + 1);
 
   if (safe_read (fd, text, *len) != *len)
     {
-      elog_error ("Failed to read %zu bytes file from fd: %s\n",
-                  *len, strerror (errno));
+      elog_error ("Failed to read %zu bytes from fd %ld: %s\n", *len, fd,
+                  strerror (errno));
       free (text);
       return NULL;
     }
@@ -229,39 +395,40 @@ get_sys_temp_dir (str_t *sys_temp_dir)
     return NULL;
 
 #ifdef WINDOWS
-    {
-      wchar_t w_tmp[MAX_PATH];
-      char *tmp;
-      size_t len = GetTempPathW (MAX_PATH, w_tmp);
-      assert (0 < len);
+  {
+    wchar_t w_tmp[MAX_PATH];
+    char *tmp;
+    size_t len = GetTempPathW (MAX_PATH, w_tmp);
+    assert (0 < len);
 
-      sys_temp_dir->name = wide_char_to_multibyte (w_tmp, len, &sys_temp_dir->size);
+    sys_temp_dir->name = wide_char_to_multibyte (w_tmp, len, &sys_temp_dir->size);
 
-      return sys_temp_dir;
-    }
+    return sys_temp_dir;
+  }
 #else
-    {
-      char* s = getenv ("TMPDIR");
-      if (s && *s)
-        {
-          int len = strlen (s);
+  {
+    char *s = getenv ("TMPDIR");
+    if (s && *s)
+      {
+        int len = strlen (s);
 
-          if (s[len - 1] == DIR_SEPARATOR)
-            {
-              sys_temp_dir->name = strndup (s, len - 1);
-              sys_temp_dir->size = len; /* len - 1 (last char) + 1 (terminating 0 byte)*/
-            }
-          else
-            {
-              sys_temp_dir->name = strndup (s, len);
-              sys_temp_dir->size = len + 1 /* + 1 (terminating 0 byte)*/;
-            }
-          elog_debug ("%s: name: (%s)\n", __func__, sys_temp_dir->name);
-          elog_debug ("%s: size: (%lu)\n", __func__, sys_temp_dir->size);
+        if (s[len - 1] == DIR_SEPARATOR)
+          {
+            sys_temp_dir->name = strndup (s, len - 1);
+            sys_temp_dir->size
+                = len; /* len - 1 (last char) + 1 (terminating 0 byte)*/
+          }
+        else
+          {
+            sys_temp_dir->name = strndup (s, len);
+            sys_temp_dir->size = len + 1 /* + 1 (terminating 0 byte)*/;
+          }
+        elog_debug ("%s: name: (%s)\n", __func__, sys_temp_dir->name);
+        elog_debug ("%s: size: (%lu)\n", __func__, sys_temp_dir->size);
 
-          return sys_temp_dir;
+        return sys_temp_dir;
       }
-    }
+  }
 
   /* Fallback */
   sys_temp_dir->name = strdup ("/tmp");
@@ -313,36 +480,36 @@ open_tmp_file (char **out_path, str_t *tmp_dir, const char* ext, unsigned ext_le
                   "suffix_len = (%u) "
                   "ext = (%s) "
                   "ext_len = %u\n",
-                 __func__,
-                 tmp_file_template,
-                 tmp_file_template_size,
-                 suffix_len,
-                 ext,
-                 ext_len);
+                  __func__,
+                  tmp_file_template,
+                  tmp_file_template_size,
+                  suffix_len,
+                  ext,
+                  ext_len);
 
       fd = mkstemps (tmp_file_template, suffix_len);
       if (fd == -1)
         {
           if (errno == EEXIST)
-              elog_error ("mkstemps: Temporary file already exists: %s\n", tmp_file_template);
+            elog_error ("mkstemps: Temporary file already exists: %s\n", tmp_file_template);
           else
-              elog_error ("mkstemps: Failed to create temporary file: %s\n", strerror (errno));
+            elog_error ("mkstemps: Failed to create temporary file: %s\n", strerror (errno));
           goto _ret;
         }
     }
   else
     {
       snprintf (tmp_file_template, tmp_file_template_size,
-                "%.*s%c" TMP_FILENAME_TEMPLATE,
-                (int)tmp_dir->size, tmp_dir->name, DIR_SEPARATOR);
+                "%.*s%c" TMP_FILENAME_TEMPLATE, (int)tmp_dir->size,
+                tmp_dir->name, DIR_SEPARATOR);
 
       fd = mkstemp (tmp_file_template);
       if (fd == -1)
         {
           if (errno == EEXIST)
-              elog_error ("mkstemp: Temporary file already exists: %s\n", tmp_file_template);
+            elog_error ("mkstemp: Temporary file already exists: %s\n", tmp_file_template);
           else
-              elog_error ("mkstemp: Failed to create temporary file: %s\n", strerror (errno));
+            elog_error ("mkstemp: Failed to create temporary file: %s\n", strerror (errno));
           goto _ret;
         }
     }
@@ -429,6 +596,7 @@ make_response (int fd, uint32_t *size)
 _ret:
   if (text != NULL) free (text);
   if (json_response != NULL) cJSON_Delete (json_response);
+  if (json_text != NULL) cJSON_Delete (json_text);
 
   return response;
 }
@@ -440,15 +608,17 @@ send_file_response (const char *filepath)
   char *response = NULL;
   uint32_t json_size = 0;
 
-  fd = open (filepath, O_RDWR | O_APPEND | O_EXCL, S_IWRITE | S_IREAD);
+  /* We need to open file in binary mode in Windows because otherwise the C
+   * runtime may transform the data as it is read. */
+  fd = open (filepath, O_RDONLY | O_BINARY_FLAG);
   if (fd == -1)
     {
-      elog_error ("%s: Failed to open file %s: %s\n",
-                 __func__, filepath, strerror (errno));
+      elog_error ("%s: Failed to open file %s: %s\n", __func__, filepath,
+                  strerror (errno));
       goto _ret;
     }
 
-  elog_debug ("%s: making response\n", __func__);
+  elog_debug ("%s: making response fd=%ld file=%s\n", __func__, fd, filepath);
 
   response = make_response (fd, &json_size);
   close(fd);

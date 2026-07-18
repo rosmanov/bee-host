@@ -32,7 +32,6 @@
 #endif
 
 #ifdef WINDOWS
-# include <winsock2.h>
 # include <windows.h>
 #else
 # include <unistd.h>
@@ -89,6 +88,7 @@
 # define O_RDWR _O_RDWR
 # define O_APPEND _O_APPEND
 # define O_EXCL _O_EXCL
+# define O_BINARY_FLAG O_BINARY
 # define S_IWRITE _S_IWRITE
 # define S_IREAD _S_IREAD
 #else /* Unix */
@@ -96,6 +96,7 @@
 # define DIR_SEPARATOR '/'
 # define TMP_FILE_MODE (S_IRUSR | S_IWUSR | S_IRGRP)
 # define SET_BINARY_MODE(fd) ((void) 0)
+# define O_BINARY_FLAG 0
 #endif /* WINDOWS */
 #define DIR_SEPARATOR_LEN sizeof (char)
 
