@@ -659,7 +659,7 @@ main (int argc, char *argv[])
   proc_options.args = editor_args;
   proc_options.file = editor_args[0];
   proc_options.exit_cb = on_editor_process_exit;
-  proc_options.flags = UV_PROCESS_WINDOWS_HIDE; /* Hide the terminal window on Windows. */
+  proc_options.flags = UV_PROCESS_WINDOWS_HIDE_CONSOLE; /* Hide the terminal window on Windows. */
   proc_options.stdio_count = 0;
   proc_options.cwd = NULL;
   proc_options.env = NULL;
