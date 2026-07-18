@@ -1,4 +1,7 @@
 -- Project-local configuration for bee-host
+-- Disable auto-formatting
+vim.b.disable_autoformat = true
+
 -- Set up auto-formatting to use clang-format with GNU style, matching Neovim's editing indentation
 vim.g.project_formatters_by_ft = {
   c = { "clang_format" },
