@@ -7,6 +7,11 @@ on:
   pull_request:
     branches: [master, main]
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Package version to publish to AUR"
+        required: true
+        type: string
 
 jobs:
   build-linux:
@@ -151,3 +156,89 @@ jobs:
           path: |
             build-win-${{ matrix.cpu }}/*.zip
             build-win-${{ matrix.cpu }}/*.exe
+
+  update-aur:
+    name: Update AUR package
+    #needs:
+    #  - build-linux
+    #  - build-macos
+    #  - build-windows
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+
+    steps:
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm base-devel git openssh pacman-contrib
+
+          useradd -m builder -d /home/builder
+
+          mkdir -p /home/builder/.ssh
+          chmod 700 /home/builder/.ssh
+
+      - name: Configure SSH
+        run: |
+          printf "%s\n" "${{ secrets.AUR_SSH_KEY }}" > /home/builder/.ssh/id_ed25519
+          chmod 600 /home/builder/.ssh/id_ed25519
+
+          # Pin SSH fingerprint to the value taken from https://aur.archlinux.org/ rather than relying on
+          # ssh-keyscan aur.archlinux.org >> /home/builder/.ssh/known_hosts
+          printf '%s\n' 'aur.archlinux.org ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEuBKrPzbawxA/k2g6NcyV5jmqwJ2s+zpgZGZ7tpLIcN' > /home/builder/.ssh/known_hosts
+          chmod 644 /home/builder/.ssh/known_hosts
+
+          chown -R builder:builder /home/builder/.ssh
+
+      - name: Clone AUR repository
+        run: |
+          runuser -u builder -- env HOME=/home/builder git clone ssh://aur@aur.archlinux.org/beectl.git /home/builder/aur
+
+      - name: Update PKGBUILD
+        working-directory: /home/builder/aur
+        env:
+          VERSION: ${{ inputs.version || github.ref_name }}
+        run: |
+          # Support both tag styles: 1.2.3 and v1.2.3
+          pkgver="${VERSION#v}"
+          sed -i -E "s|^pkgver=.*|pkgver=${pkgver}|" PKGBUILD
+          sed -i -E 's|^pkgrel=.*|pkgrel=1|' PKGBUILD
+
+      - name: Update checksums
+        working-directory: /home/builder/aur
+        run: |
+          runuser -u builder -- updpkgsums
+
+      - name: Verify source
+        working-directory: /home/builder/aur
+        run: |
+          runuser -u builder -- makepkg --verifysource
+
+      - name: Regenerate .SRCINFO
+        working-directory: /home/builder/aur
+        run: |
+          runuser -u builder -- sh -c 'makepkg --printsrcinfo > .SRCINFO'
+
+      - name: Commit and push
+        working-directory: /home/builder/aur
+        env:
+          VERSION: ${{ inputs.version || github.ref_name }}
+        run: |
+          runuser -u builder -- env HOME=/home/builder sh -c "$(cat <<-SCRIPT
+            cd "$GITHUB_WORKSPACE/aur"
+
+            git config user.name "Ruslan Osmanov"
+            git config user.email "608192+rosmanov@users.noreply.github.com"
+
+            git add PKGBUILD .SRCINFO
+
+            if git diff --cached --quiet; then
+              echo "Nothing changed."
+              exit 0
+            fi
+
+            git commit -m "Update to ${VERSION}"
+            git push
+          SCRIPT
+          )"
