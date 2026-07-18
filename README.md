@@ -58,21 +58,19 @@ dpkg -i beectl-<VERSION>.<ARCH>.deb
 
 ### Arch Linux
 
-Install build dependencies:
-
+Install from the AUR using **yay**:
 ```bash
-sudo pacman -S --needed base-devel
+yay -S beectl
 ```
 
-Build and install:
-
+Alternatively,
 ```bash
-git clone https://github.com/rosmanov/bee-host.git
-cd bee-host/arch
+git clone https://aur.archlinux.org/beectl.git
+cd beectl
 makepkg -si
 ```
 
-This package installs the binary and browser manifests automatically.
+The package installs the binary and browser native messaging manifests automatically.
 
 ### NixOS
 
