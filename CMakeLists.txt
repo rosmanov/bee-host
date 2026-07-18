@@ -18,13 +18,6 @@ configure_file(
   @ONLY
 )
 
-# Generate Arch Linux PKGBUILD from template
-configure_file(
-  "${CMAKE_CURRENT_SOURCE_DIR}/arch/PKGBUILD.in"
-  "${CMAKE_CURRENT_SOURCE_DIR}/arch/PKGBUILD"
-  @ONLY
-)
-
 string(TOUPPER "${CMAKE_SYSTEM_NAME}" uppercase_CMAKE_SYSTEM_NAME)
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Force static library build")
