@@ -1,0 +1,13 @@
+BasedOnStyle: GNU
+
+IndentWidth: 2
+ColumnLimit: 79
+UseTab: Never
+
+BinPackArguments: false
+BinPackParameters: false
+AllowAllArgumentsOnNextLine: false
+
+AlignAfterOpenBracket: Align
+
+PenaltyBreakBeforeFirstCallParameter: 1000
