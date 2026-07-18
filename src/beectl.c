@@ -65,6 +65,7 @@ uv_timer_t debounce_timer;
 uv_timer_t watch_start_timer;
 bool debounce_timer_started = false;
 char *tmp_file_path = NULL;
+char *tmp_file_name = NULL;
 str_t tmp_file_dir = { 0 };
 static uv_timespec_t last_mtime = {0};
 
@@ -387,7 +388,7 @@ on_file_change (uv_fs_event_t *handle,
                 int events,
                 int status)
 {
-  if (filename == NULL || strcmp (filename, basename (tmp_file_path)) != 0)
+  if (filename == NULL || strcmp (filename, tmp_file_name) != 0)
     return;
 
   if (status < 0)
@@ -548,7 +549,10 @@ main (int argc, char *argv[])
     {
       error = cJSON_GetErrorPtr ();
       if (error != NULL)
-        elog_error ("Failed parsing browser request: %s\n", error);
+        {
+          elog_debug ("Failed to parse json_text (%ld) `%s`\n", json_size, json_text);
+          elog_error ("Failed parsing browser request: %s\n", error);
+        }
       exit_code = EXIT_FAILURE;
       goto _ret;
     }
@@ -594,6 +598,13 @@ main (int argc, char *argv[])
       goto _ret;
     }
   elog_debug ("opened file (%s)\n", tmp_file_path);
+  tmp_file_name = strdup (path_basename (tmp_file_path));
+  if (tmp_file_name == NULL)
+    {
+      elog_error ("Failed to allocate temporary filename copy\n");
+      exit_code = EXIT_FAILURE;
+      goto _ret;
+    }
   editor_args[editor_args_num - num_reserved_args - 1] = tmp_file_path;
 
   elog_debug ("writing %s (len = %u) to tmp file (fd = %d)\n",
@@ -684,6 +695,8 @@ _ret:
   if (fd != -1) close (fd);
   if (tmp_file_path != NULL)
     remove_file (tmp_file_path);
+  if (tmp_file_name != NULL)
+    free (tmp_file_name);
 
   if (editor_args)
     {

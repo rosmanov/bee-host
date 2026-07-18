@@ -24,12 +24,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 #ifndef __BEECTL_STR_H__
-# define __BEECTL_STR_H__
+#define __BEECTL_STR_H__
 #include "common.h" /* unlikely */
-#include <string.h> /* memchr, memcpy */
 #include <stdbool.h>
+#include <stdlib.h>    /* free */
+#include <string.h>    /* memchr, memcpy */
 #include <sys/types.h> /* size_t */
-#include <stdlib.h> /* free */
 
 #ifndef HAVE_STRNDUP
 char *strndup (const char *s, size_t n);
@@ -37,6 +37,13 @@ char *strndup (const char *s, size_t n);
 
 /* Checks if a string ends with a suffix */
 bool ends_with (const char *str, const char *suffix);
+
+forceinline const char *
+path_basename (const char *path)
+{
+  const char *p = strrchr (path, DIR_SEPARATOR);
+  return p ? p + 1 : path;
+}
 
 /* Returns true, if path looks like an absolute path.
    path_size includes terminating null byte. */
@@ -59,7 +66,6 @@ typedef struct _str_t {
   size_t size; /* Size of name in bytes */
 } str_t;
 
-
 /* Frees the memory allocated for the *inner* structure members
    (the pointer itself won't be freed) */
 forceinline void
@@ -68,10 +74,10 @@ str_destroy (str_t *s)
   if (s)
     {
       if (s->name != NULL)
-      {
+        {
           free (s->name);
           s->name = NULL;
-      }
+        }
       s->name = NULL;
     }
 }
