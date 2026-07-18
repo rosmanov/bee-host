@@ -242,3 +242,47 @@ jobs:
             git push
           SCRIPT
           )"
+
+  create-release:
+    name: Create Release
+    needs: [build-linux, build-macos, build-windows]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          # Get the release notes from the tag message
+          TAG_MESSAGE=$(git tag -l --format='%(contents)' $VERSION)
+          # If no message, fall back to commit message
+          if [ -z "$TAG_MESSAGE" ]; then
+            TAG_MESSAGE=$(git log -1 --pretty=%B $VERSION)
+          fi
+
+          # Create the release
+          # Upload all files found in artifacts directory
+          files=$(find artifacts -type f)
+          if [ -z "$files" ]; then
+              echo "No artifacts found!"
+              exit 1
+          fi
+          
+          gh release create $VERSION \
+            --title "Release $VERSION" \
+            --notes "$TAG_MESSAGE" \
+            $files
+

@@ -354,10 +354,13 @@ This sends a test message to the native host and verifies the response.
 2. Update `changelog` file (for RPM packages)
 3. Run CMake to regenerate `flake.nix`: `cd build && cmake ..`
 4. Commit version changes: `git add CMakeLists.txt changelog flake.nix`
-5. Build packages for all platforms: run the GitHub Actions `Cross-Platform Build` workflow (or run locally using `act`)
-6. Test packages on target systems
-7. Tag release in Git: `git tag -a vX.Y.Z -m "Release X.Y.Z"`
-8. Upload packages to GitHub Releases and SourceForge
+5. Tag release in Git: `git tag -a X.Y.Z -m "Release X.Y.Z"`
+6. Push tag: `git push origin X.Y.Z`
+7. GitHub Actions will automatically:
+   - Build packages for all platforms
+   - Create a GitHub Release and attach artifacts upon tagging the repository
+   - Update AUR package
+8. Manually upload packages to SourceForge (if needed)
 
 ---
 
