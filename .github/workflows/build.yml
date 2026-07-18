@@ -159,10 +159,10 @@ jobs:
 
   update-aur:
     name: Update AUR package
-    #needs:
-    #  - build-linux
-    #  - build-macos
-    #  - build-windows
+    needs:
+      - build-linux
+      - build-macos
+      - build-windows
     if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     container:
