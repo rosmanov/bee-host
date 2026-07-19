@@ -58,13 +58,19 @@ dpkg -i beectl-<VERSION>.<ARCH>.deb
 
 ### Arch Linux
 
-Install from the AUR using **yay**:
+Install from the AUR:
+- Using **yay**:
 ```bash
 yay -S beectl
+```
+- Using **paru**:
+```bash
+paru -S beectl
 ```
 
 Alternatively,
 ```bash
+sudo pacman -S --needed base-devel git
 git clone https://aur.archlinux.org/beectl.git
 cd beectl
 makepkg -si
