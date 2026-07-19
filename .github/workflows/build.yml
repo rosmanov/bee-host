@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Package version to publish to AUR"
+        description: "Existing Git tag to publish (e.g., 1.2.3)"
         required: true
         type: string
 
@@ -246,7 +246,7 @@ jobs:
   create-release:
     name: Create Release
     needs: [build-linux, build-macos, build-windows]
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -264,25 +264,55 @@ jobs:
       - name: Create Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ github.ref_name }}
+          VERSION: ${{ inputs.version || github.ref_name }}
         run: |
-          # Get the release notes from the tag message
-          TAG_MESSAGE=$(git tag -l --format='%(contents)' $VERSION)
-          # If no message, fall back to commit message
-          if [ -z "$TAG_MESSAGE" ]; then
-            TAG_MESSAGE=$(git log -1 --pretty=%B $VERSION)
+          set -euo pipefail
+
+          [[ -n "$VERSION" ]] || {
+              echo "VERSION is empty"
+              exit 1
+          }
+          VERSION="${VERSION#v}"
+
+          if ! git rev-parse "$VERSION^{tag}" >/dev/null 2>&1; then
+            echo "Tag $VERSION does not exist"
+            exit 1
           fi
 
-          # Create the release
+          TAG_MESSAGE=$(
+              git tag -l --format='%(contents)' "$VERSION"
+          )
+          if [[ -z "$TAG_MESSAGE" ]]; then
+              TAG_MESSAGE=$(git log -1 --pretty=%B "$VERSION" 2>/dev/null || true)
+          fi
+          printf '%s' "$TAG_MESSAGE" > release-notes.md
+
           # Upload all files found in artifacts directory
-          files=$(find artifacts -type f)
-          if [ -z "$files" ]; then
+          mapfile -t files < <(
+              find artifacts -type f | sort
+          )
+          if [ "${#files[@]}" -eq 0 ]; then
               echo "No artifacts found!"
               exit 1
           fi
-          
-          gh release create $VERSION \
-            --title "Release $VERSION" \
-            --notes "$TAG_MESSAGE" \
-            $files
+
+          if [[ "${ACT:-}" == "true" ]]; then
+            echo "Local simulation: Skipping actual GitHub release creation."
+            echo "Would have uploaded:"
+            printf "%s\n" "${files[@]}"
+            exit 0
+          fi
+
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+          echo "Release already exists; uploading assets."
+              gh release upload "$VERSION" "${files[@]}" --clobber
+          else
+            echo "Creating release"
+            gh release create "$VERSION" \
+              --repo "$GITHUB_REPOSITORY" \
+              --verify-tag \
+              --title "Release $VERSION" \
+              --notes-file release-notes.md \
+              "${files[@]}"
+          fi
 
