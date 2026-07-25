@@ -423,19 +423,42 @@ set(CPACK_RPM_PACKAGE_GROUP "Development Tools")
 set(CPACK_RPM_PACKAGE_LICENSE "${PROJECT_LICENSE}")
 set(CPACK_RPM_BUILDREQUIRES "git, cmake >= 3.12, make, gcc")
 set(CPACK_RPM_PACKAGE_RELEASE "${CPACK_PACKAGE_RELEASE}")
-set(
-    CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION
+set(CPACK_RPM_SOURCE_PKG_PACKAGING_INSTALL_PREFIX "/usr")
+set(CPACK_RPM_SOURCE_PKG_BUILD_PARAMS "-DCMAKE_INSTALL_PREFIX=/usr")
+
+set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION
     /usr
     /usr/bin
     /usr/local
     /usr/local/bin
     /usr/lib
+    /usr/lib64
     /usr/lib/.build-id
-    "${CMAKE_INSTALL_BINDIR}"
-    "/${BEECTL_CHROME_MANIFEST_DIR}"
-    "/${BEECTL_CHROMIUM_MANIFEST_DIR}"
-    "/${BEECTL_FIREFOX_MANIFEST_DIR}"
+    /usr/share
+    /usr/share/doc
+    /etc
+    /etc/opt
 )
+
+macro(add_rpm_exclude_path path)
+    if(path)
+        string(REGEX REPLACE "//+" "/" norm_path "/${path}")
+        list(APPEND CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "${norm_path}")
+    endif()
+endmacro()
+
+add_rpm_exclude_path("${CMAKE_INSTALL_BINDIR}")
+add_rpm_exclude_path("${BEECTL_BIN_DIR}")
+add_rpm_exclude_path("${BEECTL_CHROME_MANIFEST_DIR}")
+add_rpm_exclude_path("${BEECTL_CHROMIUM_MANIFEST_DIR}")
+add_rpm_exclude_path("${BEECTL_FIREFOX_MANIFEST_DIR}")
+if(BEECTL_FIREFOX_MANIFEST_DIR_ALT)
+    add_rpm_exclude_path("${BEECTL_FIREFOX_MANIFEST_DIR_ALT}")
+endif()
+add_rpm_exclude_path("/etc/opt/chrome")
+add_rpm_exclude_path("/etc/chromium")
+add_rpm_exclude_path("/usr/lib/mozilla")
+add_rpm_exclude_path("/usr/lib64/mozilla")
 # Disable automatic build-id section in RPMs
 set(CPACK_RPM_SPEC_MORE_DEFINE "%global _build_id_links none")
 # Prevent rpmbuild from calling the native x86_64 'strip' tool on the arm/ppc64* binary
