@@ -230,6 +230,39 @@ make package
 
 CPack generates a platform-specific package (RPM, DEB, NSIS, etc.).
 
+## Troubleshooting
+
+### Windows Defender blocks `beectl.exe`
+
+On some Windows installations, Microsoft Defender may block the `beectl.exe` native-messaging host after installation.
+
+If you trust the `beectl` release, open **PowerShell as Administrator** and run:
+
+```powershell
+$paths = @(
+    Get-ChildItem "C:\Program Files" -Directory -Filter "beectl *" -ErrorAction SilentlyContinue |
+        ForEach-Object {
+            Get-ChildItem $_.FullName -Filter "beectl.exe" -File -Recurse -ErrorAction SilentlyContinue
+        }
+) | Select-Object -ExpandProperty FullName
+
+if ($paths) {
+    Add-MpPreference -ExclusionPath $paths
+    Write-Host "Added Microsoft Defender exclusions:"
+    $paths | ForEach-Object { Write-Host "  $_" }
+} else {
+    Write-Host "Could not find the installed beectl executables."
+}
+```
+
+The command automatically finds the installed `beectl.exe` native-messaging hosts, including the Chrome and Firefox versions, so you do not need to specify the installed version manually.
+
+> [!CAUTION]
+> **Security warning:** Microsoft Defender will not scan files added to its exclusion list. Only add these exclusions if you downloaded `beectl` from a source you trust.
+
+> [!NOTE]
+> **Why this workaround?** This issue can be mitigated by signing beectl with Microsoft's Artifact Signing service, which currently costs $9.99/month. Since beectl is a free application, I don't consider an ongoing signing subscription justified for its distribution.
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
